@@ -30,9 +30,19 @@ Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔�
 攻擊之所以成立，是因為那一步會執行字型裡自帶的程式碼；關掉它，字型裡的程式就沒有機會跑。
 這個做法**不需要先認出攻擊長什麼樣**，所以連還沒公開的變種也擋得住。
 
-代價是畫質：少了 hinting，小字會稍微變糊。實測 DejaVu Sans 在 32px 下，前 300 個字元有
-**72% 的點陣圖有變化，平均高度差 0.88 px、最差 2 px**；Minecraft 介面那種很小的字會更明顯。
-這是刻意的取捨 —— **用一點畫質換掉整類攻擊**。
+代價是畫質：少了 hinting，小字會稍微變糊。這是刻意的取捨 —— **用一點畫質換掉整類攻擊**。
+
+**實際差多少，看圖最準（上排＝原版，下排＝本工具）：**
+
+![hinting comparison](docs/images/hinting-comparison.png)
+
+- 圖是**真的用 Minecraft 26.3 內建的同一個繪字引擎（FreeType 2.14.3）**畫出來的，不是示意圖；放大成像素格方便比較
+- **HUD 那種 9px 小字差最多**（邊緣變柔、不再對齊像素格）；16px 還看得出來；32px 幾乎分不出來
+- 量化：DejaVu Sans 32px 前 300 字元，**72% 點陣圖有變化、平均高度差 0.88 px、最差 2 px**
+- 中文（CJK）字因為筆畫多，差異比英文更不明顯
+
+如果你覺得小字糊到受不了，可以改用 `-Dm2sfix.policy=detect`：只處理被判定為惡意的那個字型，
+其他字型保持原樣（代價是回到「只擋已知變種」）。
 
 **只有偵測到高危才會跳警告視窗**（一般字型只是安靜降級，不會打擾你）：
 
@@ -51,6 +61,22 @@ Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔�
 > 視窗裡**不會**顯示「它原本要執行什麼指令」。原因很實在：公開的那支攻擊程式把指令直接寫在
 > 字型的程式碼裡組出來，144 個字型裡用任何編碼（ASCII／UTF-16／拆成 4 byte）都找不到
 > `calc.exe`，沒有可靠辦法反推。與其顯示一個猜的，不如不顯示。
+
+### 支援哪些版本
+
+我直接對 Mojang 的版本清單（Piston meta）與實際的原生函式庫驗證過：
+
+| Minecraft | 內建 FreeType | 有這個漏洞嗎 | 本工具 |
+| --- | --- | --- | --- |
+| 26.3 / 26.4 快照 | 2.14.3（LWJGL 3.4.3） | 有 | ✅ |
+| 26.1 – 26.2 | 2.14.1（LWJGL 3.4.1） | 有 | ✅ |
+| 1.20.5 – 1.21.10 | 2.13.2（LWJGL 3.3.3） | 有 | ✅ |
+| 1.20.4 及更早 | 沒有用 FreeType（走 stb_truetype） | 不是同一個洞 | ⛔ 不適用 |
+
+- FreeType 的 `Ins_SHZ` 修補是 2026 年 4 月進上游、隨 **2.15.0**（2026-10）釋出；上面三個版本樹全都早於它。
+- 最新正式版 26.3 與最新快照 26.4-snapshot-10 **都還是 lwjgl-freetype 3.4.3**，所以官方還沒修。
+- 1.20.4 以前的客戶端根本沒呼叫 FreeType，本工具掛上去也不會被觸發（不會壞，但也沒作用）。
+- 舊版（1.20.5–1.21.x）跑的是 Java 21，本工具就是編 Java 21，可以直接用。
 
 ### 安裝（選一種就好）
 
@@ -133,10 +159,23 @@ engine. The attack only works because that step executes bytecode embedded in th
 the font's own program never runs. This needs no idea of what the attack looks like, so variants that
 are not public yet are covered too.
 
-The cost is rendering quality: without hinting, small text looks slightly softer. Measured on
-DejaVu Sans at 32px, first 300 glyphs: **72% of bitmaps change, mean height difference 0.88 px,
-worst case 2 px**; Minecraft's tiny UI text is affected more. That is the deliberate trade —
-**a little sharpness for a whole class of bugs**.
+The cost is rendering quality: without hinting, small text looks slightly softer. That is the
+deliberate trade — **a little sharpness for a whole class of bugs**.
+
+**See exactly how much (top row = vanilla, bottom row = this tool):**
+
+![hinting comparison](docs/images/hinting-comparison.png)
+
+- Rendered with the **same font engine Minecraft 26.3 ships (FreeType 2.14.3)**, then zoomed with
+  nearest-neighbour so individual pixels are visible — not a mock-up
+- **HUD-sized 9 px text changes the most** (softer edges, no longer pixel-aligned); 16 px is still
+  noticeable; at 32 px you can barely tell
+- Measured on DejaVu Sans at 32 px, first 300 glyphs: **72% of bitmaps change, mean height
+  difference 0.88 px, worst case 2 px**
+- CJK text shows the difference even less, because dense strokes hide it
+
+If the softness bothers you, switch to `-Dm2sfix.policy=detect`: only the font judged malicious is
+degraded and everything else stays vanilla (the cost is going back to "known variants only").
 
 **A warning dialog appears only for high-confidence hits** (ordinary fonts are just quietly degraded):
 
@@ -156,6 +195,25 @@ To go back to the old "only touch fonts judged malicious" behaviour (sharpness f
 > builds its command inside the font's own bytecode: `calc.exe` appears in none of the 144 shipped
 > fonts in any encoding (ASCII, UTF-16, 4-byte split), so there is no reliable way to recover it.
 > Showing a guess would be worse than showing nothing.
+
+### Supported versions
+
+Checked against Mojang's own version manifest (Piston meta) and the actual native libraries:
+
+| Minecraft | bundled FreeType | vulnerable | this tool |
+| --- | --- | --- | --- |
+| 26.3 / 26.4 snapshots | 2.14.3 (LWJGL 3.4.3) | yes | ✅ |
+| 26.1 – 26.2 | 2.14.1 (LWJGL 3.4.1) | yes | ✅ |
+| 1.20.5 – 1.21.10 | 2.13.2 (LWJGL 3.3.3) | yes | ✅ |
+| 1.20.4 and older | no FreeType (stb_truetype) | a different bug | ⛔ not applicable |
+
+- The `Ins_SHZ` fix landed upstream in April 2026 and shipped in **2.15.0** (2026-10); every version
+  tree above predates it.
+- The latest release (26.3) and the latest snapshot (26.4-snapshot-10) still ship
+  `lwjgl-freetype 3.4.3` — Mojang has not shipped the fix yet.
+- Before 1.20.5 the client never calls FreeType, so the hooks are never reached (harmless, but no
+  effect either).
+- 1.20.5 – 1.21.x run Java 21, which is what this project targets, so they work as-is.
 
 ### Install (pick one)
 
