@@ -53,9 +53,10 @@ public final class FaceGuard {
                 return false;
             }
 
+            int scanLimit = FixPolicy.maxScanBytes();
             long available = Math.min(size, fontData.remaining());
-            boolean capped = available > MAX_FONT_BYTES;
-            int bytesToRead = (int) Math.min(available, MAX_FONT_BYTES);
+            boolean capped = available > scanLimit;
+            int bytesToRead = (int) Math.min(available, scanLimit);
             if (bytesToRead <= 0) {
                 return false;
             }
@@ -74,7 +75,7 @@ public final class FaceGuard {
             if (capped && result.verdict() == ScanResult.Verdict.CLEAN) {
                 result = new ScanResult(
                         ScanResult.Verdict.UNPARSABLE,
-                        "font exceeds the " + MAX_FONT_BYTES + "-byte scan limit");
+                        "font exceeds the " + scanLimit + "-byte scan limit");
             }
 
             boolean flagged = switch (result.verdict()) {
@@ -92,7 +93,7 @@ public final class FaceGuard {
                 logOnce(hash, result);
             }
             if (result.verdict() == ScanResult.Verdict.SUSPICIOUS && seenOnce(hash, "notified")) {
-                Notify.warnAboutBlockedFont(PayloadHint.find(bytes));
+                Notify.warnAboutBlockedFont();
             }
             return true;
         } catch (Throwable ignored) {

@@ -36,6 +36,7 @@ public final class FixPolicy {
     public static final String PROP_LOG = "m2sfix.log";
     public static final String PROP_SHA256_ALLOW = "m2sfix.sha256.allow";
     public static final String PROP_NOTIFY = "m2sfix.notify";
+    public static final String PROP_MAX_SCAN_MIB = "m2sfix.maxscan";
 
     private static volatile Settings settings = load();
 
@@ -62,6 +63,11 @@ public final class FixPolicy {
         return current().sha256Allowlist();
     }
 
+    /** How many bytes of a font are scanned before it is treated as unverifiable. */
+    public static int maxScanBytes() {
+        return current().maxScanBytes();
+    }
+
     /** In-game warning dialog on/off. */
     public static boolean notifyEnabled() {
         return current().notifyEnabled();
@@ -82,8 +88,21 @@ public final class FixPolicy {
         UnparsablePolicy unparsable = parseUnparsable(readProperty(PROP_UNPARSABLE));
         boolean log = parseBoolean(readProperty(PROP_LOG), true);
         boolean notify = parseBoolean(readProperty(PROP_NOTIFY), true);
+        int maxScanBytes = parseMaxScanMiB(readProperty(PROP_MAX_SCAN_MIB)) * 1024 * 1024;
         Set<String> allowlist = parseAllowlist(readProperty(PROP_SHA256_ALLOW));
-        return new Settings(enabled, policy, unparsable, log, notify, allowlist);
+        return new Settings(enabled, policy, unparsable, log, notify, maxScanBytes, allowlist);
+    }
+
+    private static int parseMaxScanMiB(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 64;
+        }
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return value < 1 ? 1 : Math.min(value, 4096);
+        } catch (NumberFormatException e) {
+            return 64;
+        }
     }
 
     private static String readProperty(String name) {
@@ -149,6 +168,7 @@ public final class FixPolicy {
             UnparsablePolicy unparsablePolicy,
             boolean logEnabled,
             boolean notifyEnabled,
+            int maxScanBytes,
             Set<String> sha256Allowlist) {
     }
 }

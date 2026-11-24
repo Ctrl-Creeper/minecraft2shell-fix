@@ -5,6 +5,15 @@
 > ⚠️ 這個工具**還沒在真正的 Minecraft 客戶端上實測過**（作者沒有 Windows 環境），
 > 目前的驗證都是在 Java 層模擬完成。請當成「先擋一下」的過渡方案，不是官方修補。
 
+### 免責聲明（請先讀）
+
+- **可能誤判**：正常字型若被誤認為惡意，該字型的進階繪字會被關掉，外觀可能稍微變糊。
+- **可能漏判**：這是特徵偵測（認 `IDEF` 指令）。換一種寫法的新變種可能完全偵測不到，攻擊照樣成立。
+- **不保證**能阻擋任何特定攻擊、不保證相容任何 Minecraft 或模組版本、不保證適合任何用途。
+- **風險自負**：使用本工具所產生的一切後果（包括仍被入侵、遊戲異常、存檔或資料損毀）由使用者自行承擔，**作者不負任何責任、不提供任何形式的擔保**。
+- 真正的修法是等 Minecraft 更新到已修復的繪字引擎；這個工具只是過渡。
+- 若你不同意以上任何一點，請不要安裝。
+
 ---
 
 ## 中文
@@ -26,17 +35,17 @@ Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔�
 **而且會跳一個警告視窗告訴你：**
 
 ```
-檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），會在你的電腦執行指令：
-{指令}
-已經攔截，指令沒有被執行。
+檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），已經攔截。
+這類字型可以在你的電腦上執行任意程式，這個伺服器送來的樣本沒有被執行。
 
 [我了解，繼續遊玩]  [中斷連線]
 ```
 
 按「中斷連線」會直接離開那個伺服器。不需要任何設定，也不影響遊戲效能。
 
-> 先說實話：公開的那支攻擊程式**沒有把指令用明文寫在字型裡**，所以 `{指令}` 那欄可能是
-> 「無法辨識」。那不是壞掉 —— 攔截照樣有效，只是讀不出它本來要跑什麼。
+> 視窗裡**不會**顯示「它原本要執行什麼指令」。原因很實在：公開的那支攻擊程式把指令直接寫在
+> 字型的程式碼裡組出來，144 個字型裡用任何編碼（ASCII／UTF-16／拆成 4 byte）都找不到
+> `calc.exe`，沒有可靠辦法反推。與其顯示一個猜的，不如不顯示。
 
 ### 安裝（選一種就好）
 
@@ -94,6 +103,20 @@ look exactly the same**.
 > ⚠️ **Not tested against a live Minecraft client** (no Windows environment here). All verification
 > is Java-level simulation. Treat it as a stopgap, not a vendor fix.
 
+### Disclaimer (read this first)
+
+- **False positives are possible.** A legitimate font that trips the check loses its advanced glyph
+  rendering, so it may look slightly blurrier.
+- **Misses are possible.** This is signature-based (it looks for the `IDEF` instruction). A variant
+  written differently will not be detected and the attack still works.
+- **No guarantee** of stopping any particular attack, of compatibility with any Minecraft or mod
+  version, or of fitness for any purpose.
+- **Use at your own risk.** Any consequence of using this tool — including still being compromised,
+  game misbehaviour, or damaged worlds/data — is the user's own; the author accepts **no liability**
+  and provides **no warranty** of any kind.
+- The real fix is an upstream Minecraft update; this is a stopgap.
+- If you disagree with any of the above, do not install it.
+
 ### The problem, in plain words
 
 A Minecraft server can send players a resource pack that contains a font. Someone figured out how to
@@ -112,19 +135,18 @@ Each font is checked once when it is loaded:
 **And you get a dialog:**
 
 ```
-This server's resource pack looks malicious (minecraft2shell).
-Command it would run:
-{command}
-Blocked — the command never ran.
+This server's resource pack looks malicious (minecraft2shell). It was blocked and did not run;
+fonts like this can execute arbitrary code on the client.
 
 [Continue]  [Disconnect]
 ```
 
 "Disconnect" leaves that server immediately. No configuration, no measurable performance cost.
 
-> Honest note: the published exploit does **not** store its command in plain text inside the font, so
-> `{command}` may read "not stored in plain text". That is not a failure — the block still applies,
-> we just cannot show what it wanted to run.
+> The dialog deliberately does **not** show "the command it would have run". The published exploit
+> builds its command inside the font's own bytecode: `calc.exe` appears in none of the 144 shipped
+> fonts in any encoding (ASCII, UTF-16, 4-byte split), so there is no reliable way to recover it.
+> Showing a guess would be worse than showing nothing.
 
 ### Install (pick one)
 

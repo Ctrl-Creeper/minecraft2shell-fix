@@ -54,10 +54,28 @@ Written after the implementation, so it records what actually happened rather th
   this the player would get a modal dialog storm. `FaceGuard.seenOnce()` gates it, and the tests cover
   the "same font twice ⇒ no second dialog" case against Minecraft stand-ins.
 
-The published PoC stores its command in bytecode, not as plaintext, so `PayloadHint` (printable ASCII
-runs containing `.exe`, `powershell`, `/bin/sh`, `http://`, …) returns nothing for it — the dialog then
-says the command is not recoverable. Verified over all 144 PoC fonts: `hint_found=0`. That is why the
-README states it up front instead of promising a command line.
+The dialog does **not** display a command. An earlier version had a `PayloadHint` heuristic (printable
+ASCII runs looking like a command) plus a `{command}` line; it was removed after checking the artifact
+properly: `calc.exe` and `WinExec` appear in none of the 144 PoC fonts as ASCII, UTF-16LE, or as two
+4-byte little-endian dwords, and `PayloadHint` found 0 of 144. The payload is assembled by the bytecode,
+so any suggestion we printed would have been a guess. Showing nothing is the honest option.
+
+## Variant testing
+
+`tools/make_fixture_fonts.py` now generates the whole hostile/benign matrix (IDEF in `fpgm` / `prep` /
+simple glyph / composite glyph / after a decoy push payload / 32-bit `loca` / tiny `maxp` / second face
+of a `.ttc` / truncated, plus a hinting-heavy but clean font and push-payload-only decoys), and
+`VariantDetectionTest` asserts both directions, including a scan of every font installed on the build
+machine.
+
+The matrix found two real problems:
+
+1. The "decoy + real IDEF" fixture was mis-encoded — the second `IDEF` landed inside the `PUSHB`
+   payload, so the scanner's CLEAN verdict was correct and the fixture was wrong. Fixed the fixture (and
+   the test now proves the scanner skips payloads *and* still finds a later real `IDEF`).
+2. The 64 MiB scan cap was a hard-coded constant that no test could reach. It is now
+   `m2sfix.maxscan` (MiB), so the fail-closed path is exercised by shrinking the limit instead of
+   allocating 64 MiB.
 
 ## What is NOT verified
 

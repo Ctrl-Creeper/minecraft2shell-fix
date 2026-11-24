@@ -35,14 +35,16 @@ public final class Notify {
     /**
      * Warns the player that a font from the server's resource pack was blocked.
      *
-     * @param commandHint the command the font would have run, or {@code null} when unknown
+     * <p>No command is shown: the published exploit assembles its payload inside the font's own
+     * bytecode, so there is no reliable way to recover "what it would have run" for an arbitrary
+     * sample — and showing a guess would be worse than showing nothing.</p>
      */
-    public static void warnAboutBlockedFont(String commandHint) {
+    public static void warnAboutBlockedFont() {
         try {
             if (!FixPolicy.notifyEnabled()) {
                 return;
             }
-            String body = body(commandHint);
+            String body = body();
             if (showConfirmScreen(body)) {
                 return;
             }
@@ -153,16 +155,11 @@ public final class Notify {
         }
     }
 
-    private static String body(String commandHint) {
-        boolean known = commandHint != null && !commandHint.isBlank();
-        String command = known
-                ? commandHint
-                : "（無法辨識：這個樣本沒把指令用明文寫在字型裡 / not stored in plain text）";
-        return "檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），會在你的電腦執行指令：\n"
-                + command + "\n"
-                + "已經攔截，指令沒有被執行。\n\n"
-                + "This server's resource pack looks malicious (minecraft2shell). The command above was "
-                + "blocked and never ran.";
+    private static String body() {
+        return "檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），已經攔截。\n"
+                + "這類字型可以在你的電腦上執行任意程式，這個伺服器送來的樣本沒有被執行。\n\n"
+                + "This server's resource pack looks malicious (minecraft2shell). It was blocked and did "
+                + "not run; fonts like this can execute arbitrary code on the client.";
     }
 
     private static void log(String body) {
