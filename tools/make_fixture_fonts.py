@@ -11,6 +11,8 @@ committed so that `mvn test` does not need Python or network access.
 Fixtures:
   clean.ttf                valid fpgm/prep, no IDEF
   clean-hinting-heavy.ttf  FDEF + SHZ + SHPIX + WS in composite and simple glyphs, no IDEF
+  clean-korean-idef.ttf    legit custom instructions (IDEF 0x00-0x04, 0x93), like KoPub/Nanum
+  malicious-idef-shpix.ttf IDEF redefines SHPIX (0x38) — a variant target, must be flagged
   pushb-decoy.ttf          0x89 hidden in PUSHB / NPUSHB / NPUSHW payloads
   malicious-idef.ttf       IDEF (0x89) in fpgm
   malicious-idef-prep.ttf  IDEF only in prep
@@ -145,7 +147,7 @@ def _build_collection() -> None:
     if not clean_path.exists():
         build_font(clean_path, fpgm=b"\xb0\x01", prep=b"\x36")
     if not malicious_path.exists():
-        build_font(malicious_path, fpgm=b"\x36\x89\x00")
+        build_font(malicious_path, fpgm=b"\xb0\x36\x89")
 
     collection = TTCollection()
     collection.fonts = [
@@ -171,7 +173,8 @@ def main() -> None:
 
     build_font(
         OUT_DIR / "malicious-idef.ttf",
-        fpgm=b"\x36\x89\x00",  # SHZ, then IDEF 0 (the exploit primitive)
+        # PUSHB 54 (0x36 = SHZ), IDEF -> the exact shape of the published exploit
+        fpgm=b"\xb0\x36\x89",
     )
 
     build_font(
@@ -184,38 +187,53 @@ def main() -> None:
 
     build_font(
         OUT_DIR / "nested-composite.ttf",
-        glyph_programs={"B": b"\x89\x00"},
+        glyph_programs={"B": b"\xb0\x36\x89"},
         composite_b=True,
     )
 
     build_font(
         OUT_DIR / "simple-glyph-idef.ttf",
-        glyph_programs={"A": b"\x89\x00"},
+        glyph_programs={"A": b"\xb0\x36\x89"},
     )
 
     # --- variants that must still be flagged ---------------------------------
     build_font(
         OUT_DIR / "malicious-idef-prep.ttf",
-        prep=b"\x89\x00",
+        prep=b"\xb0\x36\x89",
     )
 
     build_font(
         OUT_DIR / "malicious-idef-decoyed.ttf",
-        # PUSHB[3] swallows four payload bytes (0x89 inside), then a real IDEF follows it.
-        fpgm=b"\xb3\x89\x00\x11\x22\x89\x36",
+        # PUSHB[3] swallows four payload bytes (0x89 inside), then a real PUSHB 54; IDEF follows.
+        fpgm=b"\xb3\x89\x00\x11\x22\xb0\x36\x89",
     )
 
     build_font(
         OUT_DIR / "malicious-idef-longloca.ttf",
-        fpgm=b"\x89\x36",
-        glyph_programs={"A": b"\x89\x36"},
+        fpgm=b"\xb0\x36\x89",
+        glyph_programs={"A": b"\xb0\x36\x89"},
         force_long_loca=True,
     )
 
     build_font(
         OUT_DIR / "malicious-small-stack.ttf",
-        fpgm=b"\x89\x36",
+        fpgm=b"\xb0\x36\x89",
         max_stack_elements=1,
+    )
+
+    # Legitimate custom instruction definitions, as real Korean Hanja fonts ship them.
+    build_font(
+        OUT_DIR / "clean-korean-idef.ttf",
+        fpgm=(
+            b"\xb0\x00\x89\xb0\x01\x89\xb0\x02\x89"
+            b"\xb0\x03\x89\xb0\x04\x89\xb0\x93\x89"
+        ),
+    )
+
+    # A different point-zone opcode than the published PoC, to keep the net wide.
+    build_font(
+        OUT_DIR / "malicious-idef-shpix.ttf",
+        fpgm=b"\xb0\x38\x89",
     )
 
     # --- a legitimate font that uses plenty of hinting, but no IDEF ----------

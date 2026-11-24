@@ -30,8 +30,9 @@ class TtfScannerTest {
         ScanResult result = TtfScanner.scan(TestFonts.read(TestFonts.MALICIOUS));
 
         assertEquals(ScanResult.Verdict.SUSPICIOUS, result.verdict());
-        assertTrue(result.reason().contains("IDEF instruction in fpgm"), result.reason());
-        assertTrue(result.reason().contains("1 occurrence"), result.reason());
+        assertTrue(result.reason().contains("IDEF"), result.reason());
+        assertTrue(result.reason().contains("0x36"), "the hijacked opcode must be named: " + result.reason());
+        assertTrue(result.reason().contains("fpgm"), result.reason());
     }
 
     @Test

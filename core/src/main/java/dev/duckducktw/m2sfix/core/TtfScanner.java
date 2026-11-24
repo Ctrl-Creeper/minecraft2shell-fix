@@ -168,17 +168,30 @@ public final class TtfScanner {
             scanGlyphs(data, glyf, loca, head, maxp, stats);
         }
 
-        if (stats.idefCount > 0) {
+        String hostile = stats.firstExploitShapedIdef();
+        if (hostile != null) {
             return new FaceOutcome(
                     ScanResult.Verdict.SUSPICIOUS,
-                    "IDEF instruction in " + stats.firstIdefLocation,
+                    hostile,
                     stats.idefCount,
                     stats.firstIdefLocation,
                     stats.shzCount);
         }
+        if (stats.idefCount > 0) {
+            // Some fonts legitimately define their own instructions (Korean Hanja/Hangul faces do
+            // exactly this). Redefining a point-moving opcode is the exploit's signature; defining
+            // anything else is not, so it stays clean and is only reported in the reason text.
+            return new FaceOutcome(
+                    ScanResult.Verdict.CLEAN,
+                    "IDEF present for " + stats.describeIdefOpcodes()
+                            + " (not a point-zone instruction); SHZ count=" + stats.shzCount,
+                    0,
+                    null,
+                    stats.shzCount);
+        }
         return new FaceOutcome(
                 ScanResult.Verdict.CLEAN,
-                "no IDEF instruction",
+                "no IDEF instruction; SHZ count=" + stats.shzCount,
                 0,
                 null,
                 stats.shzCount);
@@ -302,24 +315,28 @@ public final class TtfScanner {
     /**
      * Decodes a TrueType instruction stream without executing it.
      *
-     * <p>Only PUSH-family instructions carry inline data. FDEF and IDEF each
-     * carry one operand byte (the definition number), exactly as FreeType's
-     * {@code Ins_FDEF}/{@code Ins_IDEF} read it.</p>
+     * <p>Only the PUSH family carries inline data. {@code FDEF} and {@code IDEF} take their
+     * definition number from the <em>stack</em> (FreeType's {@code Ins_FDEF}/{@code Ins_IDEF} read
+     * {@code args[0]}), so the value pushed right before them is what matters; the definition body
+     * follows immediately in the stream. The published exploit is exactly {@code PUSHB 54; IDEF}.</p>
      */
     private static void scanInstructions(byte[] data, int start, int end, String location, Stats stats) {
         int ip = Math.max(0, start);
         int limit = Math.min(end, data.length);
+        int lastPushed = -1;
 
         while (ip < limit) {
             int opcode = data[ip] & 0xFF;
 
             if (opcode == OP_IDEF) {
-                stats.addIdef(location);
-                ip = Math.min(limit, ip + 2);
+                // The definition number is on the stack; the body starts at the next byte.
+                stats.addIdef(location, lastPushed);
+                ip++;
                 continue;
             }
             if (opcode == OP_FDEF) {
-                ip = Math.min(limit, ip + 2);
+                lastPushed = -1;
+                ip++;
                 continue;
             }
             if (opcode == OP_SHZ) {
@@ -330,16 +347,25 @@ public final class TtfScanner {
             if (opcode == OP_NPUSHB || opcode == OP_NPUSHW) {
                 int count = ip + 1 < limit ? data[ip + 1] & 0xFF : 0;
                 long skip = opcode == OP_NPUSHB ? 2L + count : 2L + 2L * count;
+                if (count == 1) {
+                    lastPushed = opcode == OP_NPUSHB
+                            ? (ip + 2 < limit ? data[ip + 2] & 0xFF : -1)
+                            : (ip + 3 < limit ? s16(data, ip + 2) : -1);
+                } else {
+                    lastPushed = -1;
+                }
                 ip = (int) Math.min((long) limit, (long) ip + skip);
                 continue;
             }
             if (opcode >= 0xB0 && opcode <= 0xB7) {
                 int count = (opcode & 0x07) + 1;
+                lastPushed = count == 1 && ip + 1 < limit ? data[ip + 1] & 0xFF : -1;
                 ip = Math.min(limit, ip + 1 + count);
                 continue;
             }
             if (opcode >= 0xB8 && opcode <= 0xBF) {
                 int count = (opcode & 0x07) + 1;
+                lastPushed = count == 1 && ip + 2 < limit ? s16(data, ip + 1) : -1;
                 ip = Math.min(limit, ip + 1 + 2 * count);
                 continue;
             }
@@ -349,9 +375,10 @@ public final class TtfScanner {
 
     private static ScanResult toResult(FaceOutcome outcome) {
         return switch (outcome.verdict) {
-            case SUSPICIOUS -> suspicious(outcome.firstIdefLocation, outcome.idefCount);
+            case SUSPICIOUS -> new ScanResult(ScanResult.Verdict.SUSPICIOUS, outcome.reason);
             case UNPARSABLE -> unparsable(outcome.reason);
-            case CLEAN -> clean(outcome.shzCount);
+            // The reason carries the diagnostics, including any harmless IDEF opcodes.
+            case CLEAN -> new ScanResult(ScanResult.Verdict.CLEAN, outcome.reason);
         };
     }
 
@@ -422,12 +449,69 @@ public final class TtfScanner {
         int idefCount;
         String firstIdefLocation;
         int shzCount;
+        /** Opcodes redefined through IDEF, keyed to the table or glyph they appeared in. */
+        final java.util.List<IdefRecord> idefs = new java.util.ArrayList<>();
 
-        void addIdef(String location) {
+        /** @return a human-readable reason when a definition matches the exploit shape */
+        String firstExploitShapedIdef() {
+            for (IdefRecord record : idefs) {
+                // IDEF is only legal in fpgm/prep; a glyph program defining instructions is
+                // already out of spec and FreeType rejects it with DEF_In_Glyf_Bytecode.
+                if (!"fpgm".equals(record.location()) && !"prep".equals(record.location())) {
+                    return "IDEF instruction in " + record.location()
+                            + " (only legal in fpgm/prep)";
+                }
+                int opcode = Math.max(record.definedOpcode(), 0);
+                if (isPointZoneOpcode(opcode)) {
+                    return String.format(
+                            "IDEF redefines point-zone opcode 0x%02X in %s", opcode, record.location());
+                }
+            }
+            return null;
+        }
+
+        String describeIdefOpcodes() {
+            java.util.TreeSet<String> opcodes = new java.util.TreeSet<>();
+            for (IdefRecord record : idefs) {
+                opcodes.add(String.format("0x%02X", Math.max(record.definedOpcode(), 0)));
+            }
+            return String.join(",", opcodes);
+        }
+
+        void addIdef(String location, int definedOpcode) {
             idefCount++;
             if (firstIdefLocation == null) {
                 firstIdefLocation = location;
             }
+            idefs.add(new IdefRecord(location, definedOpcode));
         }
+    }
+
+    /**
+     * Opcodes whose FreeType handlers read or write the point zones. Redefining one of these is how
+     * the published exploit hijacks the error dispatch: the out-of-bounds write corrupts
+     * {@code exc->error}, and the recovery lookup then matches the font's {@code IDEF} for the
+     * instruction that was executing.
+     *
+     * <p>Legitimate custom instructions live outside this range — the two Korean faces in the
+     * Google Fonts corpus that use {@code IDEF} redefine {@code 0x00-0x04} and {@code 0x93}.</p>
+     */
+    private static boolean isPointZoneOpcode(int opcode) {
+        // MDAP..ALIGNRP: MDAP, IUP, SHP, SHC, SHZ, SHPIX, IP, MSIRP, ALIGNRP
+        if (opcode >= 0x2E && opcode <= 0x3C) {
+            return true;
+        }
+        // MIAP (0x3E/0x3F) also moves points through the zone arrays.
+        return opcode >= 0x3E && opcode <= 0x3F;
+    }
+
+    /**
+     * One {@code IDEF} seen in a font.
+     *
+     * @param location      where it was found ({@code fpgm}, {@code prep} or {@code glyph N})
+     * @param definedOpcode the opcode number the font defined, taken from the stack; {@code -1}
+     *                      when no constant was pushed (FreeType then sees a zero-filled stack)
+     */
+    private record IdefRecord(String location, int definedOpcode) {
     }
 }

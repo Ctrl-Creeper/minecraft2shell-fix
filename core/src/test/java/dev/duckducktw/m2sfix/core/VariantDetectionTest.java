@@ -44,7 +44,8 @@ class VariantDetectionTest {
                 "malicious-idef-longloca.ttf", // 32-bit loca table
                 "malicious-small-stack.ttf",   // 1-glyph / tiny maxp
                 "nested-composite.ttf",        // IDEF only in a composite glyph program
-                "simple-glyph-idef.ttf"        // IDEF only in a simple glyph program
+                "simple-glyph-idef.ttf",       // IDEF only in a simple glyph program
+                "malicious-idef-shpix.ttf"     // redefines SHPIX instead of SHZ
         );
     }
 
@@ -98,6 +99,7 @@ class VariantDetectionTest {
         return Stream.of(
                 "clean.ttf",                 // plain font
                 "clean-hinting-heavy.ttf",   // FDEF + SHZ + SHPIX + WS, no IDEF
+                "clean-korean-idef.ttf",     // custom instruction definitions, no point-zone opcode
                 "pushb-decoy.ttf"            // 0x89 only inside push payloads
         );
     }

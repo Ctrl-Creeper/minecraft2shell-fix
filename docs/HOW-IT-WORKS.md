@@ -88,14 +88,26 @@ from `ByteBuffer.remaining()`.
 - Reads the table directory, then walks the instruction streams of `fpgm`, `prep` and every glyph
   (`loca`/`head`/`maxp`/`glyf`, both `indexToLocFormat` widths, simple and composite glyphs).
 - The instruction decoder handles the variable-length pushes (`PUSHB`/`PUSHW`/`NPUSHB`/`NPUSHW`) and
-  treats `FDEF`/`IDEF` as 2-byte instructions, exactly like FreeType's `Ins_FDEF`. Payload bytes are
+  takes `FDEF`/`IDEF` definition numbers from the preceding push, as FreeType's `args[0]` does. Payload bytes are
   never interpreted as opcodes — there is a regression fixture for that (`pushb-decoy.ttf`).
-- Verdict: any `IDEF` ⇒ `SUSPICIOUS`; no `IDEF` ⇒ `CLEAN` (with an `SHZ` count for diagnostics);
-  unusable structure ⇒ `UNPARSABLE` (treated as suspicious by default).
+- Verdict: `IDEF` that redefines a **point-zone** instruction (`MDAP`, `IUP`, `SHP`, `SHC`, `SHZ`,
+  `SHPIX`, `IP`, `MSIRP`, `ALIGNRP`, `MIAP`) ⇒ `SUSPICIOUS`; `IDEF` in a glyph program (illegal
+  there) ⇒ `SUSPICIOUS`; any other `IDEF` ⇒ `CLEAN` and the defined opcodes are reported in the reason;
+  no `IDEF` ⇒ `CLEAN` (with an `SHZ` count); unusable structure ⇒ `UNPARSABLE` (suspicious by default).
+- The definition number of `IDEF`/`FDEF` is read from the value pushed immediately before it, exactly
+  like FreeType's `args[0]`; the published exploit's `PUSHB 54; IDEF` is the shape being matched.
 
 Why `IDEF` and not `SHZ`: DejaVu (and 3 more fonts on this machine) legitimately use `SHZ` inside
-composite glyph programs, so an `SHZ`-based signature would false-positive on stock fonts. `0 of 488`
-installed faces define an `IDEF`. See [EXPLOIT-ANALYSIS.md](EXPLOIT-ANALYSIS.md#why-the-scan-keys-on-idef-and-not-on-shz).
+composite glyph programs, so an `SHZ`-based signature would false-positive on stock fonts.
+
+Why *which* opcode matters: flagging **any** `IDEF` was measured to be too blunt. Sampling 1,042 fonts
+from the Google Fonts repository produced two false positives — `KoPubBatang-Regular.ttf` and
+`NanumMyeongjo-Regular.ttf`, which define custom instructions for `0x00-0x04` and `0x93`. The exploit
+instead redefines `0x36` (`SHZ`), i.e. an instruction FreeType already dispatches and whose handler
+moves points, because the recovery lookup matches the opcode that was executing when the corrupted
+`error` field was noticed. Keying on the point-zone family removes those false positives while keeping
+the whole class of "hijack a point-moving instruction" variants — verified with a `SHPIX` (`0x38`)
+variant fixture.
 
 ### Variant coverage (false positives *and* false negatives)
 
@@ -177,12 +189,12 @@ Run on Linux, JDK 26, against LWJGL 3.4.3 — the exact library build and FreeTy
 26.3 bundles.
 
 ```
-mvn test                # 58 tests: 50 core (scanner, policy, guard, notify, variants), 8 agent
+mvn test                # 60 tests: 52 core (scanner, policy, guard, notify, variants), 8 agent
 tools/verify-poc-pack.sh
 java -cp core/target/m2sfix-core-1.0.0.jar dev.duckducktw.m2sfix.core.cli.ScanFonts /usr/share/fonts
 ```
 
-- **58 tests green.** The agent tests install the real transformer into a running JVM against stub
+- **60 tests green.** The agent tests install the real transformer into a running JVM against stub
   classes with the exact LWJGL descriptors and assert: flagged font `flags 0 → 2`, clean font keeps
   `flags 0`, `block` rejects the face, `off` changes nothing, null/short buffers and failed face
   creation are ignored. The notify tests build the dialog against Minecraft stand-ins and check both
@@ -191,7 +203,9 @@ java -cp core/target/m2sfix-core-1.0.0.jar dev.duckducktw.m2sfix.core.cli.ScanFo
   machine.
 - **Real proof-of-concept fonts:** the published `resource-pack.zip` (SHA-1
   `f2e2859318152e32fc331d2291c2ec40ffb3c372`) — **144 / 144 flagged** (`IDEF instruction in fpgm`).
-- **False positives:** every font installed on this machine — **460 files, 0 flagged**.
+- **False positives:** every font installed on this machine — **460 files, 0 flagged** — plus
+  **1,042 fonts sampled from the Google Fonts repository, 0 flagged** (that sample is what caught the
+  earlier `IDEF`-any-opcode rule: the two Korean faces it flagged are now clean).
 - **Real FreeType 2.14.3, real PoC font, real agent jar:** the guard flagged the font, the rewritten
   flags were observed (`0 → 2`), glyphs rendered, process exited cleanly. The same harness without the
   agent also completes, i.e. it does not reproduce the Windows-only ROP chain — the exploit was never
