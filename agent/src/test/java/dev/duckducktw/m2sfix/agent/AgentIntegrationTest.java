@@ -37,6 +37,9 @@ class AgentIntegrationTest {
     void setUp() {
         clearProperties();
         System.setProperty(FixPolicy.PROP_LOG, "false");
+        // Detect mode: the assertions below distinguish flagged from clean fonts. The safe channel
+        // (default for users) is covered by safeChannelStripsHintingFromCleanFonts.
+        System.setProperty(FixPolicy.PROP_POLICY, "hintless");
         FaceGuard.clearForTests();
         FreeType.reset();
         malicious = readFont("malicious-idef.ttf");
@@ -102,6 +105,33 @@ class AgentIntegrationTest {
                 0L, ByteBuffer.wrap(clean), clean.length, new PointerBuffer(FACE_ADDRESS));
 
         assertEquals(0, newFace);
+    }
+
+    @Test
+    void safeChannelStripsHintingFromCleanFonts() {
+        System.setProperty(FixPolicy.PROP_POLICY, "safe");
+        FaceGuard.clearForTests();
+
+        int newFace = FreeType.FT_New_Memory_Face(
+                0L, ByteBuffer.wrap(clean), clean.length, new PointerBuffer(FACE_ADDRESS));
+        assertEquals(0, newFace);
+        FreeType.FT_Load_Glyph(new FT_Face(FACE_ADDRESS), 0, 0);
+
+        assertEquals(0x2, FreeType.lastLoadFlags,
+                "with the safe channel even a clean font must be loaded without hinting");
+    }
+
+    @Test
+    void safeChannelStillReportsTheAttack() {
+        System.setProperty(FixPolicy.PROP_POLICY, "safe");
+        FaceGuard.clearForTests();
+
+        int newFace = FreeType.FT_New_Memory_Face(
+                0L, ByteBuffer.wrap(malicious), malicious.length, new PointerBuffer(FACE_ADDRESS));
+        assertEquals(0, newFace);
+
+        assertTrue(FaceGuard.wasFlaggedForTests(FACE_ADDRESS),
+                "a hostile font must still be recorded so the player can be warned");
     }
 
     @Test

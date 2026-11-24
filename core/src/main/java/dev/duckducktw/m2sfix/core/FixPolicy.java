@@ -15,7 +15,15 @@ import java.util.Set;
 public final class FixPolicy {
 
     public enum Policy {
-        /** Load flagged fonts with {@code FT_LOAD_NO_HINTING}. */
+        /**
+         * Safe channel (default): <em>every</em> font is loaded with
+         * {@code FT_LOAD_NO_HINTING}, so the TrueType bytecode interpreter never runs. This does not
+         * depend on recognising the attack at all — it removes the whole class of interpreter bugs,
+         * including variants nobody has published yet. The cost is rendering quality: fonts lose
+         * hinting and small text can look softer.
+         */
+        SAFE,
+        /** Recognise-then-mitigate: only flagged fonts lose hinting. */
         HINTLESS,
         /** Refuse to load any glyph from a flagged font. */
         BLOCK,
@@ -127,12 +135,13 @@ public final class FixPolicy {
 
     private static Policy parsePolicy(String raw) {
         if (raw == null || raw.isBlank()) {
-            return Policy.HINTLESS;
+            return Policy.SAFE;
         }
         return switch (raw.trim().toLowerCase(Locale.ROOT)) {
             case "block" -> Policy.BLOCK;
             case "off" -> Policy.OFF;
-            default -> Policy.HINTLESS;
+            case "hintless", "detect" -> Policy.HINTLESS;
+            default -> Policy.SAFE;
         };
     }
 

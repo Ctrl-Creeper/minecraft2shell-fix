@@ -104,17 +104,28 @@ public final class FaceGuard {
     /**
      * Returns the load flags to use for a face.
      *
+     * <p>In the default {@link FixPolicy.Policy#SAFE} mode every face gets
+     * {@code FT_LOAD_NO_HINTING}, flagged or not: the interpreter simply never runs, so no font can
+     * reach the {@code SHZ} primitive and no future variant has to be recognised first. In
+     * {@code hintless} mode only flagged faces are affected.</p>
+     *
      * @param faceAddress native {@code FT_Face} address
      * @param flags       caller-supplied {@code FT_Load_Glyph} flags
-     * @return flags with {@link #FT_LOAD_NO_HINTING} added for flagged faces
+     * @return the flags to use
      */
     public static int adjustLoadFlags(long faceAddress, int flags) {
         try {
-            if (DISABLED.get() || !FLAGGED_FACES.containsKey(faceAddress)) {
+            if (DISABLED.get()) {
                 return flags;
             }
             FixPolicy.Settings settings = FixPolicy.current();
             if (!settings.enabled() || settings.policy() == FixPolicy.Policy.OFF) {
+                return flags;
+            }
+            if (settings.policy() == FixPolicy.Policy.SAFE) {
+                return flags | FT_LOAD_NO_HINTING;
+            }
+            if (!FLAGGED_FACES.containsKey(faceAddress)) {
                 return flags;
             }
             return flags | FT_LOAD_NO_HINTING;
@@ -142,6 +153,14 @@ public final class FaceGuard {
         } catch (Throwable ignored) {
             return 0;
         }
+    }
+
+    /**
+     * @param faceAddress native {@code FT_Face} address
+     * @return whether that face was judged hostile (used by tests and by the warning path)
+     */
+    public static boolean wasFlaggedForTests(long faceAddress) {
+        return FLAGGED_FACES.containsKey(faceAddress);
     }
 
     /** Clears remembered faces and reloads policy. Test-only. */

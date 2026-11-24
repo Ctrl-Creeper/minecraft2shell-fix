@@ -169,6 +169,23 @@ fonts like this can execute arbitrary code on the client.
 - Signatures used here were checked with `javap` on the 26.3 client jar; the dialog itself has **not**
   been seen in a real client.
 
+## 4.5 The safe channel (default)
+
+`m2sfix.policy=safe` is the default because it does not depend on the signature at all: every
+`FT_Load_Glyph` gets `FT_LOAD_NO_HINTING`, so `tt_loader_init` never builds an interpreter context and
+no font program can run. The `IDEF` scan is then only used to decide whether the player gets a warning
+dialog — a wrong scan costs a false alarm, not rendering, and a variant that does not look like `IDEF`
+is still neutralised.
+
+The price is measured, not guessed (`CompareHinting`, DejaVu Sans at 32 px, first 300 glyphs, hinted
+vs `FT_LOAD_NO_HINTING`): **72.0% of glyph bitmaps differ, mean height difference 0.88 px, mean area
+difference 14.9 px², worst case 2 px.** Small text (Minecraft's HUD) loses more apparent sharpness
+than large text. `m2sfix.policy=detect` restores the old signature-only behaviour for people who
+prefer sharpness.
+
+`block` still refuses flagged faces outright; the safe channel never refuses a glyph, it only
+degrades rendering.
+
 ## 5. Configuration
 
 System properties (`-D...` on the JVM command line):
@@ -176,7 +193,7 @@ System properties (`-D...` on the JVM command line):
 | property | default | meaning |
 | --- | --- | --- |
 | `m2sfix.enabled` | `true` | master switch |
-| `m2sfix.policy` | `hintless` | `hintless` = keep the font, drop hinting · `block` = reject the face (`FT_Err_Invalid_File_Format`) · `off` = do nothing |
+| `m2sfix.policy` | `safe` | `safe` = **every** font loads with `FT_LOAD_NO_HINTING` (no detection needed, whole bug class gone) · `detect`/`hintless` = only flagged fonts · `block` = reject flagged faces · `off` = do nothing |
 | `m2sfix.unparsable` | `hintless` | treatment of fonts the scanner cannot parse (`hintless` / `allow`) |
 | `m2sfix.notify` | `true` | in-game warning dialog |
 | `m2sfix.log` | `true` | one stderr line per flagged font |
@@ -189,14 +206,14 @@ Run on Linux, JDK 26, against LWJGL 3.4.3 — the exact library build and FreeTy
 26.3 bundles.
 
 ```
-mvn test                # 60 tests: 52 core (scanner, policy, guard, notify, variants), 8 agent
+mvn test                # 65 tests: 55 core (scanner, policy, guard, notify, variants), 10 agent
 tools/verify-poc-pack.sh
 java -cp core/target/m2sfix-core-1.0.0.jar dev.duckducktw.m2sfix.core.cli.ScanFonts /usr/share/fonts
 ```
 
-- **60 tests green.** The agent tests install the real transformer into a running JVM against stub
+- **65 tests green.** The agent tests install the real transformer into a running JVM against stub
   classes with the exact LWJGL descriptors and assert: flagged font `flags 0 → 2`, clean font keeps
-  `flags 0`, `block` rejects the face, `off` changes nothing, null/short buffers and failed face
+  `flags 0`, the safe channel strips hinting from clean fonts too, `block` rejects the face, `off` changes nothing, null/short buffers and failed face
   creation are ignored. The notify tests build the dialog against Minecraft stand-ins and check both
   buttons, the disconnect callback, the once-per-font rule and the `m2sfix.notify=false` switch. The
   variant tests cover the hostile/benign fixture matrix above plus every font installed on the build

@@ -20,6 +20,9 @@ class FaceGuardTest {
     @BeforeEach
     void setUp() {
         clearProperties();
+        // These tests describe the recognise-then-mitigate mode; the safe channel is covered by
+        // safeChannelProtectsEvenCleanFonts below.
+        System.setProperty(FixPolicy.PROP_POLICY, "hintless");
         FaceGuard.clearForTests();
         malicious = TestFonts.read(TestFonts.MALICIOUS);
         clean = TestFonts.read(TestFonts.CLEAN);
@@ -29,6 +32,27 @@ class FaceGuardTest {
     void tearDown() {
         clearProperties();
         FaceGuard.clearForTests();
+    }
+
+    @Test
+    void safeChannelProtectsEvenCleanFonts() {
+        System.setProperty(FixPolicy.PROP_POLICY, "safe");
+        FaceGuard.clearForTests();
+        FaceGuard.inspectNewFace(0x2000L, buffer(clean), clean.length);
+
+        assertEquals(0x2, FaceGuard.adjustLoadFlags(0x2000L, 0),
+                "the safe channel must strip hinting from every font, not just flagged ones");
+        assertEquals(0x6, FaceGuard.adjustLoadFlags(0x2000L, 0x4));
+    }
+
+    @Test
+    void safeChannelStillNeverBlocksAGlyph() {
+        System.setProperty(FixPolicy.PROP_POLICY, "safe");
+        FaceGuard.clearForTests();
+        FaceGuard.inspectNewFace(0x3000L, buffer(malicious), malicious.length);
+
+        assertEquals(0, FaceGuard.beforeLoadGlyph(0x3000L),
+                "the safe channel degrades rendering, it never refuses a glyph");
     }
 
     @Test

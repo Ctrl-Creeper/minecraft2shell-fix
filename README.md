@@ -26,12 +26,15 @@ Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔�
 
 ### 這個工具做什麼
 
-遊戲載入字型時會先檢查一次：
+**字型全部走「安全通道」：**所有字型載入時都關掉繪字引擎的 hinting（進階對齊）步驟。
+攻擊之所以成立，是因為那一步會執行字型裡自帶的程式碼；關掉它，字型裡的程式就沒有機會跑。
+這個做法**不需要先認出攻擊長什麼樣**，所以連還沒公開的變種也擋得住。
 
-- 一般字型 → 完全照舊，外觀、字距、清晰度都不變
-- 有問題的字型 → 只把那個字型的「進階繪字功能」關掉，字還是顯示，但攻擊那條路就斷了
+代價是畫質：少了 hinting，小字會稍微變糊。實測 DejaVu Sans 在 32px 下，前 300 個字元有
+**72% 的點陣圖有變化，平均高度差 0.88 px、最差 2 px**；Minecraft 介面那種很小的字會更明顯。
+這是刻意的取捨 —— **用一點畫質換掉整類攻擊**。
 
-**而且會跳一個警告視窗告訴你：**
+**只有偵測到高危才會跳警告視窗**（一般字型只是安靜降級，不會打擾你）：
 
 ```
 檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），已經攔截。
@@ -41,6 +44,9 @@ Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔�
 ```
 
 按「中斷連線」會直接離開那個伺服器。不需要任何設定，也不影響遊戲效能。
+
+想回到「只處理被判定為惡意字型」的舊行為（畫質優先）：
+在 JVM 參數加 `-Dm2sfix.policy=detect`。
 
 > 視窗裡**不會**顯示「它原本要執行什麼指令」。原因很實在：公開的那支攻擊程式把指令直接寫在
 > 字型的程式碼裡組出來，144 個字型裡用任何編碼（ASCII／UTF-16／拆成 4 byte）都找不到
@@ -122,13 +128,17 @@ and **Minecraft has not shipped a fix yet.**
 
 ### What this does
 
-Each font is checked once when it is loaded:
+**Every font goes through a safe channel:** glyph loading always skips the "hinting" step of the font
+engine. The attack only works because that step executes bytecode embedded in the font; skip it and
+the font's own program never runs. This needs no idea of what the attack looks like, so variants that
+are not public yet are covered too.
 
-- normal font → untouched; identical look, spacing and sharpness
-- suspicious font → only that font loses its "advanced glyph rendering" step; text still shows, but
-  the attack path is gone
+The cost is rendering quality: without hinting, small text looks slightly softer. Measured on
+DejaVu Sans at 32px, first 300 glyphs: **72% of bitmaps change, mean height difference 0.88 px,
+worst case 2 px**; Minecraft's tiny UI text is affected more. That is the deliberate trade —
+**a little sharpness for a whole class of bugs**.
 
-**And you get a dialog:**
+**A warning dialog appears only for high-confidence hits** (ordinary fonts are just quietly degraded):
 
 ```
 This server's resource pack looks malicious (minecraft2shell). It was blocked and did not run;
@@ -138,6 +148,9 @@ fonts like this can execute arbitrary code on the client.
 ```
 
 "Disconnect" leaves that server immediately. No configuration, no measurable performance cost.
+
+To go back to the old "only touch fonts judged malicious" behaviour (sharpness first), add
+`-Dm2sfix.policy=detect` to the JVM arguments.
 
 > The dialog deliberately does **not** show "the command it would have run". The published exploit
 > builds its command inside the font's own bytecode: `calc.exe` appears in none of the 144 shipped

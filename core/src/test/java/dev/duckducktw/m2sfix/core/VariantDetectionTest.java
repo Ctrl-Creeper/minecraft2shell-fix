@@ -26,6 +26,15 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class VariantDetectionTest {
 
+    @org.junit.jupiter.api.BeforeEach
+    void useDetectMode() {
+        // Scanner/guard assertions below describe recognise-then-mitigate; the safe channel has its
+        // own test.
+        System.setProperty(FixPolicy.PROP_POLICY, "hintless");
+        FixPolicy.reloadForTests();
+        FaceGuard.clearForTests();
+    }
+
     private static Path fixture(String name) {
         return Path.of("src", "test", "resources", "fonts", name);
     }
@@ -210,6 +219,19 @@ class VariantDetectionTest {
             FixPolicy.reloadForTests();
             FaceGuard.clearForTests();
         }
+    }
+
+    @Test
+    void safeChannelAlsoProtectsBenignFonts() throws IOException {
+        System.setProperty(FixPolicy.PROP_POLICY, "safe");
+        FixPolicy.reloadForTests();
+        FaceGuard.clearForTests();
+        byte[] clean = read("clean-hinting-heavy.ttf");
+
+        FaceGuard.inspectNewFace(0x7777L, java.nio.ByteBuffer.wrap(clean), clean.length);
+
+        assertEquals(2, FaceGuard.adjustLoadFlags(0x7777L, 0),
+                "safe channel = no font keeps hinting");
     }
 
     @Test
