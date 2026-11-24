@@ -46,13 +46,6 @@
       <version>${lwjgl.version}</version>
       <scope>provided</scope>
     </dependency>
-    <!-- Needed by Mixin's annotation processor at compile time; not shipped. -->
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-      <version>2.10.1</version>
-      <scope>provided</scope>
-    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -70,6 +63,19 @@
     </resources>
 
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <!--
+            Mixin ships an annotation processor that generates a refmap. We target library classes
+            (org.lwjgl...), which are never remapped, so no refmap is needed - and the processor
+            drags gson/guava onto the compile classpath. Turning it off keeps the build honest.
+          -->
+          <proc>none</proc>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
