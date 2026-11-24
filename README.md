@@ -127,7 +127,10 @@ MIT。自由使用、修改、再散布。
 
 ### 想更深入了解
 
-掛點位置、偵測原理、設定選項、測試數據 → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
+- 掛點位置、偵測原理、設定選項、測試數據 → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
+- 攻擊是怎麼運作的（逐步拆解公開 PoC）→ **[docs/EXPLOIT-ANALYSIS.md](docs/EXPLOIT-ANALYSIS.md)**
+- 版本紀錄 → **[CHANGELOG.md](CHANGELOG.md)**
+- 研究這個專案碰到什麼問題 → **[SECURITY.md](SECURITY.md)**
 
 ---
 
@@ -264,4 +267,7 @@ MIT.
 
 ### Going deeper
 
-Hook points, detection logic, configuration and test data → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
+- Hook points, detection logic, configuration, test data → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
+- How the attack works, step by step → **[docs/EXPLOIT-ANALYSIS.md](docs/EXPLOIT-ANALYSIS.md)**
+- Version history → **[CHANGELOG.md](CHANGELOG.md)**
+- Reporting a bypass → **[SECURITY.md](SECURITY.md)**
