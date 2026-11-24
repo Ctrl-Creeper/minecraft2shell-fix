@@ -5,14 +5,13 @@
 > ⚠️ 這個工具**還沒在真正的 Minecraft 客戶端上實測過**（作者沒有 Windows 環境），
 > 目前的驗證都是在 Java 層模擬完成。請當成「先擋一下」的過渡方案，不是官方修補。
 
-### 免責聲明（請先讀）
+### 免責聲明
 
-- **可能誤判**：目前實測 2,811 個真實字型 face（系統 460 ＋ Google Fonts 隨機抽樣 2,351，含變數字型）**0 誤判**，但這是取樣，不是證明。若正常字型被誤認，該字型的進階繪字會被關掉，外觀可能稍微變糊，並跳出警告視窗。
-- **可能漏判**：這是特徵偵測（認「用 `IDEF` 改寫位移類指令」）。換一種手法、或改寫其他類別指令的新變種可能完全偵測不到，攻擊照樣成立。
-- **不保證**能阻擋任何特定攻擊、不保證相容任何 Minecraft 或模組版本、不保證適合任何用途。
-- **風險自負**：使用本工具所產生的一切後果（包括仍被入侵、遊戲異常、存檔或資料損毀）由使用者自行承擔，**作者不負任何責任、不提供任何形式的擔保**。
-- 真正的修法是等 Minecraft 更新到已修復的繪字引擎；這個工具只是過渡。
-- 若你不同意以上任何一點，請不要安裝。
+此工具僅為臨時解方，不是 Mojang 官方修復。
+
+此工具可能存在誤判和漏判的可能，且不保證可以攔截所有攻擊及異常警告是正確的。
+
+此工具不負任何誤判和漏判的直接／間接經濟損失和相應責任，所有責任由使用者自行承擔。若您不同意，請**不要安裝，直接拒絕所有伺服器的資源包發送請求！**
 
 ---
 
@@ -103,21 +102,16 @@ look exactly the same**.
 > ⚠️ **Not tested against a live Minecraft client** (no Windows environment here). All verification
 > is Java-level simulation. Treat it as a stopgap, not a vendor fix.
 
-### Disclaimer (read this first)
+### Disclaimer
 
-- **False positives are possible.** Measured: **0 of 2,811** real font faces (460 installed + 2,351 faces
-  sampled from Google Fonts, variable fonts included) were flagged — but that is a sample, not a proof. A legitimate font that trips the
-  check loses its advanced glyph rendering (it may look slightly blurrier) and shows the warning dialog.
-- **Misses are possible.** This is signature-based (it looks for `IDEF` redefining a point-zone
-  instruction). A variant that uses another technique, or redefines a different class of instruction,
-  will not be detected and the attack still works.
-- **No guarantee** of stopping any particular attack, of compatibility with any Minecraft or mod
-  version, or of fitness for any purpose.
-- **Use at your own risk.** Any consequence of using this tool — including still being compromised,
-  game misbehaviour, or damaged worlds/data — is the user's own; the author accepts **no liability**
-  and provides **no warranty** of any kind.
-- The real fix is an upstream Minecraft update; this is a stopgap.
-- If you disagree with any of the above, do not install it.
+This tool is a temporary workaround, not an official Mojang fix.
+
+It may produce false positives and false negatives, and it cannot guarantee that it blocks every
+attack or that any warning it shows is correct.
+
+The author accepts no liability for any direct or indirect financial loss or other consequences of
+false positives or false negatives; all responsibility rests with the user. If you do not agree,
+**do not install it — just decline every server resource-pack request instead!**
 
 ### The problem, in plain words
 
