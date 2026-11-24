@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.duckducktw.m2sfix.mod",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "FreeTypeTargetMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

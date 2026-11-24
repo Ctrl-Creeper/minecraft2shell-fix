@@ -1,0 +1,21 @@
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+.vscode/
+build/
+out/
+runs/
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+.work/
+
+# Local Maven repository used when the user-level cache is read-only.
+.m2repo/
+.m2repo/

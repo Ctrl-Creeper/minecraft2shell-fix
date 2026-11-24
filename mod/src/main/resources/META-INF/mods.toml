@@ -1,0 +1,17 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+[[mods]]
+modId = "m2sfix"
+version = "${project.version}"
+displayName = "minecraft2shell-fix"
+description = "Cuts the Minecraft font resource-pack RCE chain by keeping the TrueType bytecode interpreter away from fonts that carry the exploit primitive."
+authors = "duckducktw"
+
+[[dependencies.m2sfix]]
+modId = "forge"
+mandatory = true
+versionRange = "[1,)"
+ordering = "NONE"
+side = "CLIENT"
