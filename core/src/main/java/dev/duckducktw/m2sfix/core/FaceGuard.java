@@ -91,6 +91,9 @@ public final class FaceGuard {
             if (settings.logEnabled()) {
                 logOnce(hash, result);
             }
+            if (result.verdict() == ScanResult.Verdict.SUSPICIOUS && seenOnce(hash, "notified")) {
+                Notify.warnAboutBlockedFont(PayloadHint.find(bytes));
+            }
             return true;
         } catch (Throwable ignored) {
             return false;
@@ -169,6 +172,20 @@ public final class FaceGuard {
             }
         }
         FLAGGED_FACES.put(faceAddress, result);
+    }
+
+    /**
+     * @return {@code true} the first time this key is seen, {@code false} afterwards
+     */
+    private static boolean seenOnce(String hash, String purpose) {
+        String key = purpose + ":" + (hash == null ? "unknown" : hash);
+        if (!LOGGED_FONT_HASHES.add(key)) {
+            return false;
+        }
+        if (LOGGED_FONT_HASHES.size() > MAX_ENTRIES) {
+            LOGGED_FONT_HASHES.clear();
+        }
+        return true;
     }
 
     private static void logOnce(String hash, ScanResult result) {

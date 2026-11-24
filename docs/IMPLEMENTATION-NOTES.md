@@ -6,7 +6,7 @@ Written after the implementation, so it records what actually happened rather th
 
 | module | contents |
 | --- | --- |
-| `core` | `TtfScanner` (sfnt/ttcf parser + TrueType instruction decoder looking for `IDEF`), `ScanResult`, `FixPolicy` (system properties), `FaceGuard` (per-face verdict cache + flag/block decisions), `cli.ScanFonts` (standalone scanner) |
+| `core` | `TtfScanner` (sfnt/ttcf parser + TrueType instruction decoder looking for `IDEF`), `ScanResult`, `FixPolicy` (system properties), `FaceGuard` (per-face verdict cache + flag/block decisions), `PayloadHint` (command hint for the dialog), `Notify` (reflective `ConfirmScreen` warning), `cli.ScanFonts` (standalone scanner) |
 | `agent` | `FixAgent` (premain), `FixTransformer` (raw ASM class-file transformer), `AgentBridge` (static entry points called from injected code). Produces a shaded jar with ASM relocated to `dev.duckducktw.m2sfix.shaded.asm` |
 | `mod` | `FreeTypeTargetMixin` (Mixin, `@Inject` on `FT_New_Memory_Face`, `@ModifyVariable` on `FT_Load_Glyph`), `m2sfix.mixins.json`, `fabric.mod.json`, `META-INF/mods.toml`. Shaded with `core` |
 
@@ -41,6 +41,24 @@ Written after the implementation, so it records what actually happened rather th
 - The exploit family depends on `IDEF` (it must redefine an existing opcode, here `SHZ`/0x36).
   Legitimate fonts do not use `IDEF`.
 
+## The warning dialog
+
+`Notify` builds the vanilla `ConfirmScreen` reflectively
+(`(BooleanConsumer, Component, Component, Component, Component)`, plus a `Proxy` for the fastutil
+`BooleanConsumer`, `Component.literal`, `Minecraft.getInstance()`, `setScreenAndShow`, scheduled via
+`Minecraft.execute`). Two decisions worth recording:
+
+- **No Minecraft dependency in `core`.** The agent cannot link Minecraft classes and the mod should not
+  need them to compile, so the dialog is 100% reflection with a chat/log fallback.
+- **Only one dialog per session, one warning per font hash.** A hostile pack ships 144 fonts; without
+  this the player would get a modal dialog storm. `FaceGuard.seenOnce()` gates it, and the tests cover
+  the "same font twice ⇒ no second dialog" case against Minecraft stand-ins.
+
+The published PoC stores its command in bytecode, not as plaintext, so `PayloadHint` (printable ASCII
+runs containing `.exe`, `powershell`, `/bin/sh`, `http://`, …) returns nothing for it — the dialog then
+says the command is not recoverable. Verified over all 144 PoC fonts: `hint_found=0`. That is why the
+README states it up front instead of promising a command line.
+
 ## What is NOT verified
 
 - No live Minecraft client was launched (no Windows environment here); neither the agent nor the
@@ -55,7 +73,7 @@ Written after the implementation, so it records what actually happened rather th
 
 ```bash
 mvn -Dmaven.repo.local=$PWD/.m2repo clean package
-# -> core 24 tests, agent 8 tests, BUILD SUCCESS
+# -> core 32 tests, agent 8 tests, BUILD SUCCESS
 # -> agent/target/m2sfix-agent-1.0.0.jar (160 KB, Premain-Class, no net.bytebuddy left, 40 shaded ASM classes)
 # -> mod/target/m2sfix-mod-1.0.0.jar (30 KB, fabric.mod.json + mods.toml + m2sfix.mixins.json + mixin + core)
 

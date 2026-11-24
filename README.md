@@ -1,238 +1,173 @@
 # minecraft2shell-fix
 
-A client-side mitigation for the **Minecraft font resource-pack RCE** ("minecraft2shell"):
-it keeps the TrueType bytecode interpreter away from fonts that carry the exploit primitive,
-**without changing how legitimate fonts render**.
+幫你的 Minecraft 擋掉「伺服器資源包字型」攻擊 —— **正常字型看起來完全一樣**。
 
-> ⚠️ **Verification status: not run against a live Minecraft client.** Everything below was
-> verified with Java-only simulations (JVM bytecode injection, the real LWJGL FreeType bindings,
-> and the published proof-of-concept font pack) — see [Verification](#verification).
-
----
-
-## English
-
-### The bug in one paragraph
-
-A server can send a resource pack that contains a crafted `.ttf` font. Minecraft 26.3 renders
-fonts through FreeType **2.14.3** (bundled in LWJGL 3.4.3). In that build, a nested composite
-glyph whose `SHZ` instruction moves points past the physical point buffer causes an out-of-bounds
-write inside the TrueType interpreter (`ttinterp.c`), and the font's own bytecode (`IDEF`) turns it
-into an ASLR-aware control-flow transfer. The published proof of concept is
-[`bikini/minecraft2shell`](https://github.com/bikini/minecraft2shell) (Windows, Java 26.3 only).
-
-Upstream FreeType fixed the `Ins_SHZ` range check in April 2026 (Mozilla bug 2032043) and shipped
-it in FreeType **2.15.0** (2026-10-12). Minecraft still ships 2.14.3, so this project is a stopgap.
-
-### How the fix works
-
-The bug lives in native code, so the project does not try to patch C. It cuts the chain one layer
-above, at the two Java entry points Minecraft actually uses (verified with `javap` on the 26.3
-client jar):
-
-| Minecraft call site | LWJGL method | what we do |
-| --- | --- | --- |
-| `TrueTypeGlyphProviderDefinition.load(...)` | `FreeType.FT_New_Memory_Face(long, ByteBuffer, long, PointerBuffer)` | lint the font bytes once per face |
-| `TrueTypeGlyphProvider.loadGlyph(...)` | `FreeType.FT_Load_Glyph(FT_Face, int, int)` | add `FT_LOAD_NO_HINTING` **only for flagged faces** |
-
-Every glyph-program execution path in `ttgload.c` is gated by `IS_HINTED(load_flags)`, so a face
-loaded with `FT_LOAD_NO_HINTING` never runs the interpreter — no `SHZ`, no `IDEF`, no pivot.
-Faces that were not flagged keep the caller's flags untouched, so their rendering is bit-for-bit
-identical to vanilla.
-
-The lint itself is a small TrueType table parser (`core`): it decodes the instruction streams of
-`fpgm`, `prep` and every glyph (PUSH payloads are skipped correctly, so payload bytes are never
-mistaken for opcodes) and looks for `IDEF` — the instruction-definition primitive that legitimate
-fonts do not use and that the exploit needs to hijack an existing opcode.
-
-### Install
-
-**1. Vanilla launcher — javaagent**
-
-Add to the profile's JVM arguments:
-
-```
--javaagent:/path/to/m2sfix-agent-1.0.0.jar
-```
-
-**2. Fabric — mod jar**
-
-Drop `m2sfix-mod-1.0.0.jar` into `.minecraft/mods/`. It contains `fabric.mod.json`, the Mixin
-config and the shared core (no Fabric API dependency).
-
-**3. Forge / NeoForge**
-
-The same jar also carries `META-INF/mods.toml` and the `MixinConfigs` manifest entry, because the
-hooks target a library class and nothing has to be remapped. If your loader refuses the jar, use the
-javaagent path instead — it works on every loader.
-
-The agent and the mod are equivalent; installing both is harmless but pointless.
-
-### Configuration
-
-System properties (`-D...` on the JVM command line; in modded launchers, the JVM arguments field):
-
-| property | default | meaning |
-| --- | --- | --- |
-| `m2sfix.enabled` | `true` | master switch |
-| `m2sfix.policy` | `hintless` | `hintless` = keep the font, drop hinting · `block` = reject the face (`FT_Err_Invalid_File_Format`) · `off` = do nothing |
-| `m2sfix.unparsable` | `hintless` | what to do with a font the scanner cannot parse (`hintless` / `allow`) |
-| `m2sfix.log` | `true` | one line per flagged font |
-| `m2sfix.sha256.allow` | *(empty)* | comma-separated SHA-256 of fonts to always treat as clean |
-
-### Is it working?
-
-You should see, once per flagged font, on stderr:
-
-```
-[m2sfix] agent active (policy=HINTLESS)
-[m2sfix] flagged font 11500c6f…a8f150d731 (SUSPICIOUS): IDEF instruction in fpgm (1 occurrence)
-```
-
-No line means no font was flagged — that is the normal case for a regular server.
-
-### Verification
-
-What was actually run on Linux (JDK 26, LWJGL 3.4.3 = the exact build Minecraft 26.3 bundles):
-
-- **`mvn test` — 32 tests green** (24 core, 8 agent). The agent tests install the real transformer
-  into a running JVM against stub classes with the exact LWJGL descriptors and assert: flagged font
-  gets `flags 0 → 2`, clean font keeps `flags 0`, `block` policy rejects the face, `off` policy
-  changes nothing, null/short buffers and failed face creation are ignored.
-- **Real proof-of-concept fonts:** `tools/verify-poc-pack.sh` downloads the published
-  `resource-pack.zip` (SHA-1 `f2e2859318152e32fc331d2291c2ec40ffb3c372`) and scans it —
-  **144 / 144 fonts flagged** (`IDEF instruction in fpgm`).
-- **False positives:** every font installed on this machine — **460 files, 0 flagged**.
-- **Real FreeType 2.14.3, real PoC font, real agent jar:** the guard flagged the font
-  (`[m2sfix] flagged font …`), the rewritten flags were observed (`0 → 2`), the glyphs then
-  rendered and the process exited cleanly. The same run without the agent also completed, i.e. this
-  harness does **not** reproduce the full Windows-only ROP chain — the exploit was never executed
-  on purpose.
-
-**Not verified:** a live Minecraft 26.3 client on Windows, the Fabric/Forge jar inside a real
-loader, and the counterfactual ("without the fix it crashes") — deliberately not run. Treat this as
-a reviewed, tested stopgap, not a vendor-certified fix.
-
-### Scope and limits
-
-- Signature-based: it flags fonts that carry `IDEF`. A future variant that reaches the same
-  out-of-bounds write without `IDEF` would not be flagged (use `m2sfix.policy=block` for a stricter
-  stance, or update FreeType).
-- The real fix is upstream: FreeType ≥ 2.15.0, i.e. whatever Minecraft ships next.
-- Untested on macOS/ARM; the same FreeType build is used there, so treat it the same way.
-
-### Build
-
-```
-mvn package            # core, agent (shaded ASM), mod (core + Mixin metadata)
-mvn test               # 32 tests
-tools/verify-poc-pack.sh
-```
-
-Requires JDK 21+ and Maven. No Minecraft jar, no Gradle, no Loom.
-
-### License
-
-MIT.
+> ⚠️ 這個工具**還沒在真正的 Minecraft 客戶端上實測過**（作者沒有 Windows 環境），
+> 目前的驗證都是在 Java 層模擬完成。請當成「先擋一下」的過渡方案，不是官方修補。
 
 ---
 
 ## 中文
 
-### 這是什麼
+### 這是什麼問題（白話）
 
-Minecraft 的「資源包字型」RCE（`bikini/minecraft2shell`）的**客戶端緩解方案**：
-把 TrueType bytecode 直譯器擋在「帶有攻擊原語的字型」之外，**正常字型的渲染完全不變**。
+Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔。有人做出了攻擊：**在字型裡藏一段惡意程式，
+玩家一畫到那個字，電腦就被執行任意程式**（公開示範只是開個小算盤，但同樣可以裝後門）。
 
-> ⚠️ **驗證狀態：沒有在真正的 Minecraft 客戶端上跑過。** 所有驗證都是 Java 層模擬
-> （JVM 注入、真的 LWJGL FreeType 綁定、公開的 PoC 字型包），詳見下方「驗證」。
+問題出在遊戲畫字用的那套繪字引擎，**Minecraft 官方目前還沒修**。
 
-### 漏洞一句話
+### 這個工具做什麼
 
-伺服器可以送一個含特製 `.ttf` 的資源包。Minecraft 26.3 用 LWJGL 3.4.3 內建的 FreeType
-**2.14.3** 畫字型；該版本的 `SHZ` 指令在 nested composite glyph 上會把點移出實體點緩衝區，
-造成 interpreter 內的越界寫，再用字型自己的 bytecode（`IDEF`）把它變成無視 ASLR 的控制流轉移。
-官方 PoC：`bikini/minecraft2shell`（只針對 Windows + 26.3）。上游 FreeType 已在 2026 年 4 月修掉
-`Ins_SHZ` 的範圍檢查（Mozilla bug 2032043），並於 **2.15.0**（2026-10-12）釋出；Minecraft 還停在
-2.14.3，所以這是一個過渡方案。
+遊戲載入字型時會先檢查一次：
 
-### 怎麼切斷
+- 一般字型 → 完全照舊，外觀、字距、清晰度都不變
+- 有問題的字型 → 只把那個字型的「進階繪字功能」關掉，字還是顯示，但攻擊那條路就斷了
 
-漏洞在原生層，所以不去改 C，而是在 Minecraft 真正使用的兩個 Java 入口動手
-（用 26.3 client jar 的 `javap` 驗證過簽名）：
+**而且會跳一個警告視窗告訴你：**
 
-- `FreeType.FT_New_Memory_Face(long, ByteBuffer, long, PointerBuffer)` → 每個 face 只掃一次字型
-- `FreeType.FT_Load_Glyph(FT_Face, int, int)` → **只對被標記的 face** 加上 `FT_LOAD_NO_HINTING`
+```
+檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），會在你的電腦執行指令：
+{指令}
+已經攔截，指令沒有被執行。
 
-`ttgload.c` 裡所有 glyph program 的執行路徑都被 `IS_HINTED(load_flags)` 擋著，所以關掉 hinting
-就不會跑直譯器 —— 沒有 `SHZ`、沒有 `IDEF`、沒有 pivot。沒被標記的 face 一個 flag 都不動，
-渲染與原版逐位元相同。
+[我了解，繼續遊玩]  [中斷連線]
+```
 
-掃描器（`core`）是自己寫的 TrueType 表解析器：正確跳過 PUSH 系列指令的內嵌資料
-（避免把資料 byte 誤判成 opcode），掃 `fpgm`、`prep` 與每個 glyph 的指令流，找 `IDEF`
-—— 正常字型不會用這個指令，而 PoC 必須用它來覆寫既有 opcode。
+按「中斷連線」會直接離開那個伺服器。不需要任何設定，也不影響遊戲效能。
 
-### 安裝
+> 先說實話：公開的那支攻擊程式**沒有把指令用明文寫在字型裡**，所以 `{指令}` 那欄可能是
+> 「無法辨識」。那不是壞掉 —— 攔截照樣有效，只是讀不出它本來要跑什麼。
 
-- **原版啟動器**：在 profile 的 JVM 參數加 `-javaagent:/path/to/m2sfix-agent-1.0.0.jar`
-- **Fabric**：把 `m2sfix-mod-1.0.0.jar` 丟進 `.minecraft/mods/`（自帶 `fabric.mod.json` 與 Mixin 設定，不需 Fabric API）
-- **Forge / NeoForge**：同一顆 jar 也帶 `mods.toml` 與 manifest 的 `MixinConfigs`（掛點是函式庫類別，不用 remap）；若你的版本拒載，直接改用 javaagent 那條路
+### 安裝（選一種就好）
 
-agent 與 mod 等價，兩個都裝不會出錯但也沒必要。
+**原版啟動器（官方啟動器）**
 
-### 設定
+1. 到 [Releases](https://github.com/sunrisemc-tw/minecraft2shell-fix/releases) 下載 `m2sfix-agent-1.0.0.jar`，記住它放在哪
+2. 啟動器 →「安裝檔」→ 你的版本 →「編輯」→「更多選項」
+3. 在「JVM 參數」那欄最後面加上（路徑換成你放的位置）：
+   ```
+   -javaagent:/你的路徑/m2sfix-agent-1.0.0.jar
+   ```
+4. 儲存，啟動遊戲
 
-系統屬性（`-D...`）：
+**Fabric**
 
-- `m2sfix.enabled`（預設 `true`）：總開關
-- `m2sfix.policy`（預設 `hintless`）：`hintless` 保留字型但關 hinting／`block` 直接拒收該 face／`off` 不做事
-- `m2sfix.unparsable`（預設 `hintless`）：掃不動的字型怎麼處理（`hintless` / `allow`）
-- `m2sfix.log`（預設 `true`）：每個被標記字型印一行
-- `m2sfix.sha256.allow`：白名單（逗號分隔 SHA-256）
+下載 `m2sfix-mod-1.0.0.jar`，丟進 `.minecraft/mods/` 就好（不需要 Fabric API）。
+
+**Forge / NeoForge**
+
+同一顆 `m2sfix-mod-1.0.0.jar` 丟進 `mods/`。如果啟動器說載入失敗，改用上面的
+`-javaagent` 方式，那個在任何啟動器都能用。
 
 ### 怎麼知道有沒有生效
 
-stderr 會出現（每個被標記字型一行）：
+被攔截時會跳警告視窗；日誌裡也會有一行：
 
 ```
-[m2sfix] flagged font 11500c6f…a8f150d731 (SUSPICIOUS): IDEF instruction in fpgm (1 occurrence)
+[m2sfix] flagged font 11500c6f… (SUSPICIOUS): IDEF instruction in fpgm
 ```
 
-沒出現＝沒有任何字型被標記，這是正常伺服器的常態。
+平常什麼都沒有＝正常，代表沒遇到有問題的字型。
 
-### 驗證（實際跑過的）
+### 需要注意的地方
 
-- `mvn test`：**32 條全綠**（core 24、agent 8）。agent 測試是真的把 transformer 裝進 JVM，
-  對「簽名與 LWJGL 完全相同」的 stub 類別斷言：被標記字型 `flags 0 → 2`、正常字型維持 `0`、
-  `block` 政策拒收 face、`off` 政策不動任何東西、null/短緩衝與建 face 失敗都被安全忽略。
-- **真的 PoC 字型**：`tools/verify-poc-pack.sh` 抓公開的 `resource-pack.zip`
-  （SHA-1 `f2e2859318152e32fc331d2291c2ec40ffb3c372`），**144/144 全數標記**
-  （`IDEF instruction in fpgm`）。
-- **誤判測試**：本機所有系統字型 **460 個，0 個被標記**。
-- **真 FreeType 2.14.3 + 真 PoC 字型 + 真 agent jar**：守衛標記了該字型、觀測到 flags 由 `0` 改為 `2`、
-  glyph 正常畫出、行程正常結束。同一支程式在**不掛 agent** 時也跑得完 —— 也就是說這支 harness
-  **不會**重現那條只在 Windows 成立的 ROP 鏈（沒有刻意去觸發漏洞）。
-
-**沒驗證**：Windows 上真正的 Minecraft 26.3 客戶端、jar 在真 Fabric/Forge loader 裡、
-以及「不裝就會被打穿」的反事實對照（刻意不跑）。請把它當成「已 review 且測試過的過渡方案」，
-不是官方認證的修補。
-
-### 限制
-
-- 這是特徵偵測：辨識 `IDEF`。若之後出現不靠 `IDEF` 的同型攻擊就抓不到（要更嚴可改
-  `m2sfix.policy=block`，或等 FreeType 更新）。
-- 真正的修法在上游：FreeType ≥ 2.15.0，也就是等 Minecraft 換版本。
-- macOS/ARM 沒測；那裡用的是同一版 FreeType，請同標準看待。
-
-### 建置
-
-```
-mvn package     # core、agent（shade ASM）、mod（core + Mixin metadata）
-mvn test        # 32 條測試
-```
-
-需要 JDK 21+ 與 Maven；不需要 Minecraft jar、不用 Gradle、不用 Loom。
+- 它只認得「已知的那一類手法」；之後如果出現寫法不同的新變種，可能抓不到
+- 真正的解法是等 Minecraft 更新繪字引擎，這個工具只是過渡
+- 沒有在真正的遊戲客戶端實測過（警告視窗也還沒在真遊戲裡看過）
+- macOS / ARM 沒測
 
 ### 授權
 
-MIT。
+MIT。自由使用、修改、再散布。
+
+### 想更深入了解
+
+掛點位置、偵測原理、設定選項、測試數據 → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
+
+---
+
+## English
+
+A client-side mitigation for the Minecraft "server resource pack font" attack — **legitimate fonts
+look exactly the same**.
+
+> ⚠️ **Not tested against a live Minecraft client** (no Windows environment here). All verification
+> is Java-level simulation. Treat it as a stopgap, not a vendor fix.
+
+### The problem, in plain words
+
+A Minecraft server can send players a resource pack that contains a font. Someone figured out how to
+hide a malicious program inside such a font: **the moment the game draws a character with it, the
+player's computer can be made to run arbitrary code.** The flaw is in the font engine the game uses,
+and **Minecraft has not shipped a fix yet.**
+
+### What this does
+
+Each font is checked once when it is loaded:
+
+- normal font → untouched; identical look, spacing and sharpness
+- suspicious font → only that font loses its "advanced glyph rendering" step; text still shows, but
+  the attack path is gone
+
+**And you get a dialog:**
+
+```
+This server's resource pack looks malicious (minecraft2shell).
+Command it would run:
+{command}
+Blocked — the command never ran.
+
+[Continue]  [Disconnect]
+```
+
+"Disconnect" leaves that server immediately. No configuration, no measurable performance cost.
+
+> Honest note: the published exploit does **not** store its command in plain text inside the font, so
+> `{command}` may read "not stored in plain text". That is not a failure — the block still applies,
+> we just cannot show what it wanted to run.
+
+### Install (pick one)
+
+**Vanilla launcher**
+
+1. Download `m2sfix-agent-1.0.0.jar` from [Releases](https://github.com/sunrisemc-tw/minecraft2shell-fix/releases)
+2. Launcher → Installations → your instance → Edit → More options
+3. Append to "JVM arguments" (use your own path):
+   ```
+   -javaagent:/full/path/to/m2sfix-agent-1.0.0.jar
+   ```
+4. Save and launch
+
+**Fabric**
+
+Drop `m2sfix-mod-1.0.0.jar` into `.minecraft/mods/` (no Fabric API needed).
+
+**Forge / NeoForge**
+
+The same `m2sfix-mod-1.0.0.jar` goes into `mods/`. If your loader refuses it, use the `-javaagent`
+route above — that works with every launcher.
+
+### Did it work?
+
+A warning dialog appears when something is blocked, and the log shows one line per suspicious font:
+
+```
+[m2sfix] flagged font 11500c6f… (SUSPICIOUS): IDEF instruction in fpgm
+```
+
+Nothing at all is the normal case.
+
+### Caveats
+
+- It recognises the known family of attacks; a differently built variant may slip through
+- The real fix is an upstream Minecraft update — this is a stopgap
+- Not tested in a real game client (the dialog has not been seen on screen either)
+- Untested on macOS / ARM
+
+### License
+
+MIT.
+
+### Going deeper
+
+Hook points, detection logic, configuration and test data → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**

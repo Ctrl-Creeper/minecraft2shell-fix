@@ -35,6 +35,7 @@ public final class FixPolicy {
     public static final String PROP_UNPARSABLE = "m2sfix.unparsable";
     public static final String PROP_LOG = "m2sfix.log";
     public static final String PROP_SHA256_ALLOW = "m2sfix.sha256.allow";
+    public static final String PROP_NOTIFY = "m2sfix.notify";
 
     private static volatile Settings settings = load();
 
@@ -61,6 +62,11 @@ public final class FixPolicy {
         return current().sha256Allowlist();
     }
 
+    /** In-game warning dialog on/off. */
+    public static boolean notifyEnabled() {
+        return current().notifyEnabled();
+    }
+
     /** Re-reads all properties. Test-only convenience. */
     public static void reloadForTests() {
         settings = load();
@@ -75,8 +81,9 @@ public final class FixPolicy {
         Policy policy = parsePolicy(readProperty(PROP_POLICY));
         UnparsablePolicy unparsable = parseUnparsable(readProperty(PROP_UNPARSABLE));
         boolean log = parseBoolean(readProperty(PROP_LOG), true);
+        boolean notify = parseBoolean(readProperty(PROP_NOTIFY), true);
         Set<String> allowlist = parseAllowlist(readProperty(PROP_SHA256_ALLOW));
-        return new Settings(enabled, policy, unparsable, log, allowlist);
+        return new Settings(enabled, policy, unparsable, log, notify, allowlist);
     }
 
     private static String readProperty(String name) {
@@ -141,6 +148,7 @@ public final class FixPolicy {
             Policy policy,
             UnparsablePolicy unparsablePolicy,
             boolean logEnabled,
+            boolean notifyEnabled,
             Set<String> sha256Allowlist) {
     }
 }
