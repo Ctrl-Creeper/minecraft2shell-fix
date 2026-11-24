@@ -46,6 +46,13 @@
       <version>${lwjgl.version}</version>
       <scope>provided</scope>
     </dependency>
+    <!-- Needed by Mixin's annotation processor at compile time; not shipped. -->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.10.1</version>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
