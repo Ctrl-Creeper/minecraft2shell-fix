@@ -5,6 +5,9 @@ author or anyone auditing the mitigation needs is here.
 
 > **Status: not verified against a live Minecraft client.** See [Verification](#verification) for
 > exactly what was run.
+>
+> The published exploit traced step by step (delivery → trigger → font internals → the `Ins_SHZ`
+> bug → which step this project cuts) is in **[EXPLOIT-ANALYSIS.md](EXPLOIT-ANALYSIS.md)**.
 
 ## 1. The bug
 
@@ -89,6 +92,10 @@ from `ByteBuffer.remaining()`.
   never interpreted as opcodes — there is a regression fixture for that (`pushb-decoy.ttf`).
 - Verdict: any `IDEF` ⇒ `SUSPICIOUS`; no `IDEF` ⇒ `CLEAN` (with an `SHZ` count for diagnostics);
   unusable structure ⇒ `UNPARSABLE` (treated as suspicious by default).
+
+Why `IDEF` and not `SHZ`: DejaVu (and 3 more fonts on this machine) legitimately use `SHZ` inside
+composite glyph programs, so an `SHZ`-based signature would false-positive on stock fonts. `0 of 488`
+installed faces define an `IDEF`. See [EXPLOIT-ANALYSIS.md](EXPLOIT-ANALYSIS.md#why-the-scan-keys-on-idef-and-not-on-shz).
 
 `PayloadHint` extracts printable ASCII runs that look like a command (`.exe`, `powershell`,
 `/bin/sh`, `http://`, …). It exists only to fill the `{command}` line in the warning dialog. The
