@@ -1,0 +1,47 @@
+name: Bug report
+description: Something broke, or the mod/agent did not behave as documented
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Two things that save a round-trip:
+        `-Dm2sfix.log=true` (default) prints a line per flagged font, and the mod logs
+        `[m2sfix]` on stderr — please paste that.
+  - type: input
+    id: mc-version
+    attributes:
+      label: Minecraft version
+      placeholder: "e.g. 26.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is it installed?
+      options:
+        - Fabric mod
+        - Forge mod
+        - NeoForge mod
+        - javaagent (vanilla launcher)
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines
+      description: Anything containing `[m2sfix]`, plus the crash report if there is one.
+      render: text
+  - type: input
+    id: mods
+    attributes:
+      label: Other mods installed
+      description: Mod count is enough; names help if this looks like a conflict.

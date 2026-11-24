@@ -1,5 +1,10 @@
 # minecraft2shell-fix
 
+[![release](https://img.shields.io/github/v/release/sunrisemc-tw/minecraft2shell-fix?label=release)](https://github.com/sunrisemc-tw/minecraft2shell-fix/releases)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![minecraft](https://img.shields.io/badge/minecraft-1.20.5%20%E2%80%93%2026.4-3ddc84)](https://github.com/sunrisemc-tw/minecraft2shell-fix#%E6%94%AF%E6%8F%B4%E5%93%AA%E4%BA%9B%E7%89%88%E6%9C%AC)
+[![tests](https://img.shields.io/badge/tests-65%20passing-3ddc84)](https://github.com/sunrisemc-tw/minecraft2shell-fix/actions)
+
 幫你的 Minecraft 擋掉「伺服器資源包字型」攻擊 —— **正常字型看起來完全一樣**。
 
 > ⚠️ 這個工具**還沒在真正的 Minecraft 客戶端上實測過**（作者沒有 Windows 環境），

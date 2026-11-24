@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security issue in this project (not the game bug)
+    url: https://github.com/sunrisemc-tw/minecraft2shell-fix/security/advisories/new
+    about: Report a problem in this mitigation privately.
+  - name: The upstream Minecraft bug this project works around
+    url: https://github.com/bikini/minecraft2shell
+    about: The published proof of concept and its analysis.

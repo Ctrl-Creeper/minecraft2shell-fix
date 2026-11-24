@@ -1,0 +1,35 @@
+name: False positive / missed detection
+description: A legitimate font was flagged, or a malicious one slipped through
+title: "[detection] "
+labels: ["detection"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The default `policy=safe` degrades **every** font, so a false positive no longer changes
+        rendering — it only shows a warning dialog. Misses are the more serious report.
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Which direction?
+      options:
+        - False positive (a legitimate font was flagged)
+        - Missed detection (a malicious font was not flagged)
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: |
+        For false positives: the font name (or a download link) and the `[m2sfix]` line.
+        For misses: what the font does and, if possible, the `fpgm`/`prep`/glyph instruction dump.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: policy
+    attributes:
+      label: Effective policy
+      description: "`safe` (default), `detect`/`hintless`, `block` or `off` — and any `-Dm2sfix.*` you set."
+      placeholder: "safe"

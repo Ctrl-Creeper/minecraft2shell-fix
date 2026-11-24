@@ -1,0 +1,29 @@
+{
+  "title": "FontGuard",
+  "slug": "fontguard",
+  "project_type": "mod",
+  "summary": "擋下 Minecraft 資源包字型攻擊（minecraft2shell）：所有字型都不執行字型自帶的程式碼，正常字型只是少一點 hinting。Blocks the resource-pack font RCE without needing a signature.",
+  "description_file": "description.md",
+  "categories": [
+    "utility",
+    "management"
+  ],
+  "client_side": "required",
+  "server_side": "unsupported",
+  "license": "MIT",
+  "source_url": "https://github.com/sunrisemc-tw/minecraft2shell-fix",
+  "issues_url": "https://github.com/sunrisemc-tw/minecraft2shell-fix/issues",
+  "icon": "assets/icon-512.png",
+  "gallery": [
+    {
+      "file": "assets/banner-1280x720.png",
+      "title": "FontGuard",
+      "featured": true
+    },
+    {
+      "file": "../docs/images/hinting-comparison.png",
+      "title": "畫質代價 / sharpness cost",
+      "description": "同一段文字，上排原版、下排本工具；用 Minecraft 26.3 內建的 FreeType 2.14.3 實際渲染後像素放大。"
+    }
+  ]
+}
