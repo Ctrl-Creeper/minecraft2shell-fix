@@ -25,4 +25,23 @@ curl -sfL -o "$work/resource-pack.zip" "$pack_url"
 echo "sha1: $(sha1sum "$work/resource-pack.zip" | cut -d' ' -f1)"
 unzip -q "$work/resource-pack.zip" -d "$work/pack"
 
-java -cp "$core_jar" dev.duckducktw.m2sfix.core.cli.ScanFonts "$work/pack"
+# ScanFonts exits 1 when it flags something - which is exactly what we expect here, so the
+# assertion is on the summary line, not on the exit code.
+set +e
+output="$(java -cp "$core_jar" dev.duckducktw.m2sfix.core.cli.ScanFonts "$work/pack")"
+status=$?
+set -e
+echo "$output"
+
+summary="$(printf '%s\n' "$output" | grep -E '^scanned=' | tail -1)"
+echo "summary: $summary"
+
+if [[ "$summary" != *"scanned=144"* || "$summary" != *"flagged=144"* ]]; then
+  echo "FAIL: expected all 144 delivered fonts to be flagged (got: ${summary:-none})" >&2
+  exit 1
+fi
+if [[ $status -ne 1 ]]; then
+  echo "FAIL: ScanFonts should exit 1 when it flags fonts, got $status" >&2
+  exit 1
+fi
+echo "OK: 144/144 delivered fonts flagged"
