@@ -1,0 +1,28 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build and test
+        run: mvn -B clean package
+      - name: Verify the published proof-of-concept fonts are flagged
+        run: bash tools/verify-poc-pack.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            agent/target/m2sfix-agent-*.jar
+            mod/target/m2sfix-mod-*.jar
