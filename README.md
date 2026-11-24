@@ -7,7 +7,7 @@
 
 ### 免責聲明（請先讀）
 
-- **可能誤判**：目前實測 1,502 個真實字型（系統 460 ＋ Google Fonts 1,042）**0 誤判**，但這是取樣，不是證明。若正常字型被誤認，該字型的進階繪字會被關掉，外觀可能稍微變糊，並跳出警告視窗。
+- **可能誤判**：目前實測 2,811 個真實字型 face（系統 460 ＋ Google Fonts 隨機抽樣 2,351，含變數字型）**0 誤判**，但這是取樣，不是證明。若正常字型被誤認，該字型的進階繪字會被關掉，外觀可能稍微變糊，並跳出警告視窗。
 - **可能漏判**：這是特徵偵測（認「用 `IDEF` 改寫位移類指令」）。換一種手法、或改寫其他類別指令的新變種可能完全偵測不到，攻擊照樣成立。
 - **不保證**能阻擋任何特定攻擊、不保證相容任何 Minecraft 或模組版本、不保證適合任何用途。
 - **風險自負**：使用本工具所產生的一切後果（包括仍被入侵、遊戲異常、存檔或資料損毀）由使用者自行承擔，**作者不負任何責任、不提供任何形式的擔保**。
@@ -105,8 +105,8 @@ look exactly the same**.
 
 ### Disclaimer (read this first)
 
-- **False positives are possible.** Measured: **0 of 1,502** real fonts (460 installed + 1,042 sampled
-  from Google Fonts) were flagged — but that is a sample, not a proof. A legitimate font that trips the
+- **False positives are possible.** Measured: **0 of 2,811** real font faces (460 installed + 2,351 faces
+  sampled from Google Fonts, variable fonts included) were flagged — but that is a sample, not a proof. A legitimate font that trips the
   check loses its advanced glyph rendering (it may look slightly blurrier) and shows the warning dialog.
 - **Misses are possible.** This is signature-based (it looks for `IDEF` redefining a point-zone
   instruction). A variant that uses another technique, or redefines a different class of instruction,

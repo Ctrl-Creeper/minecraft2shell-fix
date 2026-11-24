@@ -203,9 +203,10 @@ java -cp core/target/m2sfix-core-1.0.0.jar dev.duckducktw.m2sfix.core.cli.ScanFo
   machine.
 - **Real proof-of-concept fonts:** the published `resource-pack.zip` (SHA-1
   `f2e2859318152e32fc331d2291c2ec40ffb3c372`) — **144 / 144 flagged** (`IDEF instruction in fpgm`).
-- **False positives:** every font installed on this machine — **460 files, 0 flagged** — plus
-  **1,042 fonts sampled from the Google Fonts repository, 0 flagged** (that sample is what caught the
-  earlier `IDEF`-any-opcode rule: the two Korean faces it flagged are now clean).
+- **False positives:** every font installed on this machine — **460 faces, 0 flagged** — plus
+  **2,351 faces sampled from the Google Fonts repository (1,309 files, static and variable), 0 flagged**
+  (that sample is what caught the earlier `IDEF`-any-opcode rule: the two Korean faces it flagged are
+  now clean).
 - **Real FreeType 2.14.3, real PoC font, real agent jar:** the guard flagged the font, the rewritten
   flags were observed (`0 → 2`), glyphs rendered, process exited cleanly. The same harness without the
   agent also completes, i.e. it does not reproduce the Windows-only ROP chain — the exploit was never
