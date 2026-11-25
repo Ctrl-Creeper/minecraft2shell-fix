@@ -40,9 +40,9 @@ class FaceGuardTest {
         FaceGuard.clearForTests();
         FaceGuard.inspectNewFace(0x2000L, buffer(clean), clean.length);
 
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(0x2000L, 0),
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x2000L, 0),
                 "the safe channel must strip hinting from every font, not just flagged ones");
-        assertEquals(0x6, FaceGuard.adjustLoadFlags(0x2000L, 0x4));
+        assertEquals(0x8006, FaceGuard.adjustLoadFlags(0x2000L, 0x4));
     }
 
     @Test
@@ -60,7 +60,7 @@ class FaceGuardTest {
         boolean flagged = FaceGuard.inspectNewFace(0x1000L, buffer(malicious), malicious.length);
 
         assertTrue(flagged);
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(0x1000L, 0));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x1000L, 0));
         assertEquals(0, FaceGuard.beforeLoadGlyph(0x1000L));
     }
 
@@ -75,9 +75,9 @@ class FaceGuardTest {
     void noHintingIsOrEdAndExistingFlagsArePreserved() {
         FaceGuard.inspectNewFace(0x3000L, buffer(malicious), malicious.length);
 
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(0x3000L, 0x2));
-        assertEquals(0x6, FaceGuard.adjustLoadFlags(0x3000L, 0x4));
-        assertEquals(0x7, FaceGuard.adjustLoadFlags(0x3000L, 0x5));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x3000L, 0x2));
+        assertEquals(0x8006, FaceGuard.adjustLoadFlags(0x3000L, 0x4));
+        assertEquals(0x8007, FaceGuard.adjustLoadFlags(0x3000L, 0x5));
     }
 
     @Test
@@ -110,7 +110,7 @@ class FaceGuardTest {
         byte[] garbage = "this is definitely not an sfnt file".getBytes(StandardCharsets.UTF_8);
 
         assertTrue(FaceGuard.inspectNewFace(0x6000L, buffer(garbage), garbage.length));
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(0x6000L, 0));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x6000L, 0));
     }
 
     @Test
@@ -137,7 +137,7 @@ class FaceGuardTest {
     @Test
     void clearForTestsForgetsFaces() {
         assertTrue(FaceGuard.inspectNewFace(0x9000L, buffer(malicious), malicious.length));
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(0x9000L, 0));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x9000L, 0));
 
         FaceGuard.clearForTests();
 
@@ -151,7 +151,7 @@ class FaceGuardTest {
         assertFalse(FaceGuard.inspectNewFace(0xA001L, buffer(malicious), 0));
         assertFalse(FaceGuard.inspectNewFace(0xA002L, ByteBuffer.allocate(0), 1));
         assertTrue(FaceGuard.inspectNewFace(0xA003L, buffer(malicious), Long.MAX_VALUE));
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(0xA003L, 0));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0xA003L, 0));
     }
 
     @Test
@@ -159,7 +159,7 @@ class FaceGuardTest {
         for (int i = 0; i < FaceGuard.MAX_ENTRIES + 200; i++) {
             assertTrue(FaceGuard.inspectNewFace(i, buffer(malicious), malicious.length));
         }
-        assertEquals(0x2, FaceGuard.adjustLoadFlags(FaceGuard.MAX_ENTRIES + 199L, 0));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(FaceGuard.MAX_ENTRIES + 199L, 0));
     }
 
     @Test

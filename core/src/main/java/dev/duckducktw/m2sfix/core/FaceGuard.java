@@ -19,6 +19,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class FaceGuard {
 
     public static final int FT_LOAD_NO_HINTING = 0x2;
+    public static final int FT_LOAD_NO_AUTOHINT = 0x8000;
+    /**
+     * What we OR into the load flags. {@code FT_LOAD_NO_HINTING} alone is not enough: for a face
+     * FreeType classifies as "tricky" (any family name containing e.g. {@code MingLiU} or {@code DLC},
+     * see {@code tt_check_trickyness} in ttobjs.c) {@code tt_glyph_load} clears it again unless
+     * {@code FT_LOAD_NO_AUTOHINT} is also set (ttdriver.c, 2.13.2 to 2.14.3).
+     */
+    public static final int NO_HINTING_FLAGS = FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT;
     public static final int FT_ERR_INVALID_FILE_FORMAT = 0x02;
     public static final int MAX_ENTRIES = 4096;
     public static final int MAX_FONT_BYTES = 64 * 1024 * 1024;
@@ -105,7 +113,7 @@ public final class FaceGuard {
      * Returns the load flags to use for a face.
      *
      * <p>In the default {@link FixPolicy.Policy#SAFE} mode every face gets
-     * {@code FT_LOAD_NO_HINTING}, flagged or not: the interpreter simply never runs, so no font can
+     * {@link #NO_HINTING_FLAGS}, flagged or not: the interpreter simply never runs, so no font can
      * reach the {@code SHZ} primitive and no future variant has to be recognised first. In
      * {@code hintless} mode only flagged faces are affected.</p>
      *
@@ -123,12 +131,12 @@ public final class FaceGuard {
                 return flags;
             }
             if (settings.policy() == FixPolicy.Policy.SAFE) {
-                return flags | FT_LOAD_NO_HINTING;
+                return flags | NO_HINTING_FLAGS;
             }
             if (!FLAGGED_FACES.containsKey(faceAddress)) {
                 return flags;
             }
-            return flags | FT_LOAD_NO_HINTING;
+            return flags | NO_HINTING_FLAGS;
         } catch (Throwable ignored) {
             return flags;
         }

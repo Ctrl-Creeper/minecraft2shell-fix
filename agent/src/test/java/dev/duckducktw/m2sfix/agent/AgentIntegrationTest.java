@@ -61,7 +61,7 @@ class AgentIntegrationTest {
 
         assertEquals(0, result);
         assertEquals(1, FreeType.loadGlyphCalls);
-        assertEquals(2, FreeType.lastLoadFlags);
+        assertEquals(0x8002, FreeType.lastLoadFlags);
         assertEquals(FACE_ADDRESS, FreeType.lastFaceAddress);
     }
 
@@ -81,7 +81,7 @@ class AgentIntegrationTest {
 
         FreeType.FT_Load_Glyph(new FT_Face(FACE_ADDRESS), 0, 0x4);
 
-        assertEquals(0x6, FreeType.lastLoadFlags);
+        assertEquals(0x8006, FreeType.lastLoadFlags);
     }
 
     @Test
@@ -117,7 +117,7 @@ class AgentIntegrationTest {
         assertEquals(0, newFace);
         FreeType.FT_Load_Glyph(new FT_Face(FACE_ADDRESS), 0, 0);
 
-        assertEquals(0x2, FreeType.lastLoadFlags,
+        assertEquals(0x8002, FreeType.lastLoadFlags,
                 "with the safe channel even a clean font must be loaded without hinting");
     }
 

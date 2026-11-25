@@ -182,8 +182,8 @@ class VariantDetectionTest {
 
         assertTrue(FaceGuard.inspectNewFace(face, java.nio.ByteBuffer.wrap(hostile), hostile.length),
                 "hostile face must be flagged");
-        assertEquals(2, FaceGuard.adjustLoadFlags(face, 0));
-        assertEquals(6, FaceGuard.adjustLoadFlags(face, 4));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(face, 0));
+        assertEquals(0x8006, FaceGuard.adjustLoadFlags(face, 4));
     }
 
     @Test
@@ -213,7 +213,7 @@ class VariantDetectionTest {
             boolean flagged = FaceGuard.inspectNewFace(0x5555L, java.nio.ByteBuffer.wrap(padded), padded.length);
 
             assertTrue(flagged, "a font we cannot fully scan must not be treated as clean");
-            assertEquals(2, FaceGuard.adjustLoadFlags(0x5555L, 0));
+            assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x5555L, 0));
         } finally {
             System.clearProperty(FixPolicy.PROP_MAX_SCAN_MIB);
             FixPolicy.reloadForTests();
@@ -230,7 +230,7 @@ class VariantDetectionTest {
 
         FaceGuard.inspectNewFace(0x7777L, java.nio.ByteBuffer.wrap(clean), clean.length);
 
-        assertEquals(2, FaceGuard.adjustLoadFlags(0x7777L, 0),
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x7777L, 0),
                 "safe channel = no font keeps hinting");
     }
 
