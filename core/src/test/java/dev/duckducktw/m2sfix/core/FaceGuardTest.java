@@ -4,10 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,30 @@ class FaceGuardTest {
     void tearDown() {
         clearProperties();
         FaceGuard.clearForTests();
+    }
+
+    @Test
+    void logsEachInterceptOnceEvenWhenFontLoggingIsDisabled() {
+        System.setProperty(FixPolicy.PROP_POLICY, "safe");
+        System.setProperty(FixPolicy.PROP_LOG, "false");
+        FaceGuard.clearForTests();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        PrintStream original = System.err;
+        try (PrintStream capture = new PrintStream(output, true, StandardCharsets.UTF_8)) {
+            System.setErr(capture);
+            for (int i = 0; i < 2; i++) {
+                assertEquals(0, FaceGuard.beforeNewFace(buffer(clean)));
+                FaceGuard.afterNewFace(1L, buffer(clean));
+                FaceGuard.adjustLoadFlags(1L, 0);
+            }
+        } finally {
+            System.setErr(original);
+        }
+
+        assertEquals(List.of(
+                "[m2sfix] guard active: FT_New_Memory_Face intercepted (policy=safe)",
+                "[m2sfix] guard active: FT_Load_Glyph intercepted (policy=safe)"),
+                output.toString(StandardCharsets.UTF_8).lines().toList());
     }
 
     @Test
@@ -87,6 +114,52 @@ class FaceGuardTest {
 
         assertTrue(FaceGuard.inspectNewFace(0x4000L, buffer(malicious), malicious.length));
         assertEquals(FaceGuard.FT_ERR_INVALID_FILE_FORMAT, FaceGuard.beforeLoadGlyph(0x4000L));
+    }
+
+    @Test
+    void riskyFaceLosesHintingInDetectModeWithoutBlocking() {
+        byte[] risky = TestFonts.read(TestFonts.SHZ_IN_GLYPH);
+
+        assertTrue(FaceGuard.inspectNewFace(0x4100L, buffer(risky), risky.length));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x4100L, 0));
+        assertEquals(0, FaceGuard.beforeLoadGlyph(0x4100L));
+    }
+
+    @Test
+    void blockPolicyDoesNotBlockRiskyFaces() {
+        System.setProperty(FixPolicy.PROP_POLICY, "block");
+        FaceGuard.clearForTests();
+        byte[] risky = TestFonts.read(TestFonts.SHZ_IN_GLYPH);
+
+        assertFalse(FaceGuard.inspectNewFace(0x4200L, buffer(risky), risky.length),
+                "block policy must only reject the high-confidence SUSPICIOUS tier");
+        assertEquals(0, FaceGuard.beforeLoadGlyph(0x4200L));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x4200L, 0),
+                "unblocked RISKY faces still lose hinting");
+    }
+
+    @Test
+    void blockPolicyHookPathStillDegradesRiskyFaces() {
+        System.setProperty(FixPolicy.PROP_POLICY, "block");
+        FaceGuard.clearForTests();
+        byte[] risky = TestFonts.read(TestFonts.SHZ_IN_GLYPH);
+
+        assertEquals(0, FaceGuard.beforeNewFace(buffer(risky)), "RISKY is not rejected by block");
+        FaceGuard.afterNewFace(0x4400L, buffer(risky));
+        assertEquals(0x8002, FaceGuard.adjustLoadFlags(0x4400L, 0));
+        assertEquals(FaceGuard.FT_ERR_INVALID_FILE_FORMAT, FaceGuard.beforeNewFace(buffer(malicious)));
+    }
+
+    @Test
+    void sha256AllowlistOverridesRiskyVerdict() throws Exception {
+        byte[] risky = TestFonts.read(TestFonts.SHZ_IN_GLYPH);
+        String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(risky));
+        System.setProperty(FixPolicy.PROP_SHA256_ALLOW, hash);
+        FaceGuard.clearForTests();
+
+        assertFalse(FaceGuard.inspectNewFace(0x4300L, buffer(risky), risky.length));
+        assertEquals(0, FaceGuard.adjustLoadFlags(0x4300L, 0));
+        assertEquals(0, FaceGuard.beforeLoadGlyph(0x4300L));
     }
 
     @Test
