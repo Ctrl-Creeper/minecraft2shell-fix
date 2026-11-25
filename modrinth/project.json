@@ -1,8 +1,8 @@
 {
-  "title": "FontGuard",
-  "slug": "fontguard",
+  "title": "mc2shell-fix",
+  "slug": "mc2shell-fix",
   "project_type": "mod",
-  "summary": "擋下 Minecraft 資源包字型攻擊（minecraft2shell）：所有字型都不執行字型自帶的程式碼，正常字型只是少一點 hinting。Blocks the resource-pack font RCE without needing a signature.",
+  "summary": "Blocks the Minecraft resource-pack font RCE (minecraft2shell) on 1.20.5–1.21.11 by never running font bytecode. 在客户端拦截资源包字体攻击。",
   "description_file": "description.md",
   "categories": [
     "utility",
@@ -11,19 +11,19 @@
   "client_side": "required",
   "server_side": "unsupported",
   "license": "MIT",
-  "source_url": "https://github.com/sunrisemc-tw/minecraft2shell-fix",
-  "issues_url": "https://github.com/sunrisemc-tw/minecraft2shell-fix/issues",
+  "source_url": "https://github.com/Ctrl-Creeper/minecraft2shell-fix",
+  "issues_url": "https://github.com/Ctrl-Creeper/minecraft2shell-fix/issues",
   "icon": "assets/icon-512.png",
   "gallery": [
     {
       "file": "assets/banner-1280x720.png",
-      "title": "FontGuard",
+      "title": "mc2shell-fix",
       "featured": true
     },
     {
       "file": "../docs/images/hinting-comparison.png",
-      "title": "畫質代價 / sharpness cost",
-      "description": "同一段文字，上排原版、下排本工具；用 Minecraft 26.3 內建的 FreeType 2.14.3 實際渲染後像素放大。"
+      "title": "Sharpness cost / 画质代价",
+      "description": "Top: vanilla, bottom: with mc2shell-fix, rendered by the real FreeType build and zoomed. 上排原版，下排安装后；用真实 FreeType 渲染后放大。"
     }
   ]
 }

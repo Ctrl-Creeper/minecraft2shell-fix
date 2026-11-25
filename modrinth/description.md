@@ -1,77 +1,88 @@
-**這個模組不做「偵測攻擊」，它直接讓攻擊沒有機會發生。**
+**English** · [简体中文](#简体中文)
 
-Minecraft 允許伺服器發資源包給玩家，裡面可以放 `.ttf` 字型。有人證明：只要在字型裡藏對的
-bytecode，玩家畫到那個字的瞬間就可能被執行任意程式（公開 PoC：`bikini/minecraft2shell`，
-Windows + Minecraft 26.3）。問題出在遊戲內建的繪字引擎 FreeType 2.14.3，**Mojang 到目前
-（26.3 / 26.4 快照）都還沒換版本**。
+Protects your client against the **Minecraft resource-pack font remote code execution**
+([minecraft2shell](https://github.com/bikini/minecraft2shell)). A server can send a resource pack
+with a crafted TrueType font, and in FreeType before 2.15.0 drawing a single character with it can
+let the server run code on your computer.
 
-FontGuard 的做法是：**所有字型載入時都不執行 hinting**。攻擊的那一步就是「執行字型自帶的
-程式碼」，關掉它，字型裡的程式就沒有機會跑。因為完全不需要認出攻擊長相，**還沒公開的變種
-也一樣擋得住**。
+## Who needs it
 
-### 代價（請先看過再裝）
-
-少了 hinting，字會稍微變柔，**小字最明顯**：
-
-- 9px（介面文字大小）：邊緣變柔、不再對齊像素格
-- 16px：看得出來
-- 32px：幾乎分不出來
-- 中文因為筆畫密，比英文更不明顯
-
-量化：DejaVu Sans 32px 前 300 字元，72% 點陣圖有變化、平均高度差 0.88px、最差 2px。
-
-![hinting comparison](https://raw.githubusercontent.com/sunrisemc-tw/minecraft2shell-fix/main/docs/images/hinting-comparison.png)
-
-如果你覺得小字糊到受不了，可以在 JVM 參數加 `-Dm2sfix.policy=detect`：只有可能執行到
-出問題那條指令（SHZ）的字型才關 hinting，其他保持原樣（約 11% 的一般字型也會被降級）。
-
-### 什麼時候會跳警告
-
-只有**高信心**命中（`IDEF` 改寫位移類指令、或在字形程式裡定義指令）才會跳視窗：
-
-> 檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），已經攔截。
-> [我了解，繼續遊玩] [中斷連線]
-
-一般字型只是安靜降級，不會打擾你。同一場遊戲只跳一次。
-
-### 支援版本
-
-| Minecraft | 內建 FreeType | 本模組 |
+| Minecraft | FreeType it loads | Vulnerable |
 | --- | --- | --- |
-| 26.3 / 26.4 快照 | 2.14.3 | ✅ |
-| 26.1 – 26.2 | 2.14.1 | ✅ |
-| 1.20.5 – 1.21.10 | 2.13.2 | ✅ |
-| 1.20.4 及更早 | 沒用 FreeType | ⛔ 不適用 |
+| 1.20.5 – 1.21.11 | 2.13.2 | **yes**: install this |
+| 26.1 and newer | 2.15.0 (fixed by Mojang) | no |
+| 1.20.4 and older | not used | not this bug |
 
-（以上是用 Mojang 版本清單＋實際原生函式庫驗證的版本號，不是猜的。）
+## What it does
 
-### 免責聲明
+Every font is loaded with hinting turned off (`FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT`), so
+FreeType never runs the bytecode inside a font. That is the code the attack needs. The tool doesn't
+have to recognise the attack, so unpublished variants are covered too.
 
-此工具僅為臨時解方，不是 Mojang 官方修復。此工具可能存在誤判和漏判的可能，且不保證可以
-攔截所有攻擊及異常警告是正確的。此工具不負任何誤判和漏判的直接／間接經濟損失和相應責任，
-所有責任由使用者自行承擔。若您不同意，請**不要安裝，直接拒絕所有伺服器的資源包發送請求！**
+The cost: small text looks slightly softer. Fonts shaped like the published exploit also trigger a
+warning with a **Disconnect** button.
+
+![sharpness comparison](https://raw.githubusercontent.com/Ctrl-Creeper/minecraft2shell-fix/main/docs/images/hinting-comparison.png)
+
+## Install
+
+- **Fabric, Forge, NeoForge:** put the jar in `mods/`. No other mods needed. If the hooks cannot
+  apply, the game stops at startup and tells you, so it never runs unprotected without saying so.
+- **Vanilla launcher, or if you run other mods that call FreeType themselves:** use the Java agent
+  from [GitHub Releases](https://github.com/Ctrl-Creeper/minecraft2shell-fix/releases) with
+  `-javaagent:/path/to/m2sfix-agent-2.2.0.jar`.
+
+It works if the log shows `[m2sfix] guard active: FT_Load_Glyph intercepted` after startup.
+
+Tested in real clients on macOS: Fabric 1.21.10, Forge 1.20.6 and 1.21.10, NeoForge 1.20.5, 1.20.6
+and 1.21.10.
+
+## Disclaimer
+
+A temporary workaround, not an official Mojang fix. It may have false positives or negatives and
+comes with no guarantee. If you don't agree, decline server resource packs instead.
+
+Open source (MIT): [GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix). It's a fork of
+[sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix).
 
 ---
 
-## English
+## 简体中文
 
-**This mod does not detect the attack — it removes the step the attack needs.**
+保护你的客户端，防御 **Minecraft 资源包字体远程代码执行漏洞**
+（[minecraft2shell](https://github.com/bikini/minecraft2shell)）。服务器可以发送带有恶意 TrueType 字体的资源包；
+在 FreeType 2.15.0 之前的版本中，只要用这个字体画出一个字，服务器就能在你的电脑上执行任意程序。
 
-A Minecraft server can send a resource pack containing a `.ttf` font. Someone proved that a crafted
-font can turn glyph hinting into arbitrary code execution (public PoC: `bikini/minecraft2shell`,
-Windows + Minecraft 26.3). The flaw is in the bundled FreeType 2.14.3, and Mojang has not shipped a
-newer one yet (not in 26.3, not in the 26.4 snapshots).
+### 谁需要安装
 
-FontGuard loads **every** font with hinting disabled. That step is exactly what runs the font's own
-bytecode, so disabling it means the font's program never runs — no signature has to match, which
-means unpublished variants are covered too.
+| Minecraft | 使用的 FreeType | 是否受影响 |
+| --- | --- | --- |
+| 1.20.5 – 1.21.11 | 2.13.2 | **受影响**：请安装 |
+| 26.1 及更新版本 | 2.15.0（Mojang 已修复） | 不受影响 |
+| 1.20.4 及更早版本 | 未使用 | 不是这个漏洞 |
 
-**The cost:** text loses hinting and looks slightly softer, most visibly at small sizes (9 px HUD
-text). Measured on DejaVu Sans at 32 px: 72% of glyph bitmaps change, mean height difference 0.88 px.
-Use `-Dm2sfix.policy=detect` if you prefer sharpness and accept signature-only coverage.
+### 它做了什么
 
-**Warning dialog** appears only for high-confidence hits; ordinary fonts are just quietly degraded.
+所有字体在加载时都关闭 hinting（`FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT`），FreeType 就永远不会执行
+字体里自带的字节码，而攻击正需要它。这个做法不需要先认出攻击，所以未公开的变种也能防住。
 
-**Disclaimer.** This is a temporary workaround, not an official Mojang fix. It may produce false
-positives and false negatives and makes no guarantee. The author accepts no liability; all
-responsibility rests with the user. If you do not agree, do not install it.
+代价：小字会稍微变柔和。遇到与公开攻击特征相符的字体时，还会弹出警告，并提供 **断开连接** 按钮。
+
+### 安装
+
+- **Fabric、Forge、NeoForge：** 把 jar 放进 `mods/` 即可，无需其他前置模组。如果无法挂钩，游戏会在启动时
+  停止并告诉你，绝不会在没有保护的情况下默默运行。
+- **原版启动器，或装了其他会直接调用 FreeType 的模组：** 请从
+  [GitHub Releases](https://github.com/Ctrl-Creeper/minecraft2shell-fix/releases) 下载 Java agent，
+  在 JVM 参数中加入 `-javaagent:/路径/m2sfix-agent-2.2.0.jar`。
+
+启动后日志中出现 `[m2sfix] guard active: FT_Load_Glyph intercepted`，就表示已经生效。
+
+已在 macOS 的真实客户端测试：Fabric 1.21.10、Forge 1.20.6 和 1.21.10、NeoForge 1.20.5、1.20.6 和 1.21.10。
+
+### 免责声明
+
+这只是临时解决方案，不是 Mojang 官方修复；可能存在误报或漏报，不提供任何保证。若不同意，请改为拒绝服务器的资源包。
+
+开源（MIT）：[GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix)，派生自
+[sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix)。

@@ -1,7 +1,6 @@
 {
   "version_number": "2.2.0",
   "name": "2.2.0 (Forge / NeoForge)",
-  "release_channel": "release",
   "game_versions": [
     "1.20.5",
     "1.20.6",
@@ -16,27 +15,16 @@
     "1.21.8",
     "1.21.9",
     "1.21.10",
-    "26.1",
-    "26.2",
-    "26.3",
-    "26.4-snapshot-1",
-    "26.4-snapshot-2",
-    "26.4-snapshot-3",
-    "26.4-snapshot-4",
-    "26.4-snapshot-5",
-    "26.4-snapshot-6",
-    "26.4-snapshot-7",
-    "26.4-snapshot-8",
-    "26.4-snapshot-9",
-    "26.4-snapshot-10"
+    "1.21.11"
   ],
   "featured": true,
   "dependencies": [],
   "file": "../mod/target/m2sfix-mod-2.2.0.jar",
-  "changelog": "2.2.0 — 修正安全通道可被繞過的問題（同時設定 FT_LOAD_NO_AUTOHINT）；Forge / NeoForge 真正可用（實機測試 Forge 1.20.6/1.21.10、NeoForge 1.20.5–26.3）；detect 模式改為「只要字型可能執行 SHZ 就關 hinting」；修正掃描器多個漏判；警告視窗「繼續」可正常關閉。\n\n2.1.0 — 支援 1.20.5 以上（實測各版本內建 FreeType：26.3/26.4 快照 = 2.14.3、26.1–26.2 = 2.14.1、1.20.5–1.21.10 = 2.13.2，全部早於修好的 2.15.0），新增畫質對比圖。\n\n2.0.0 — 預設改走安全通道：所有字型都不執行 hinting，警告只在高信心命中時出現。\n\n1.x — 特徵偵測版本（IDEF 改寫位移指令），PoC 字型 144/144 標記。",
+  "changelog": "2.2.0 — Security hardening of the no-hinting flags (recommended update); Forge and NeoForge now actually load and apply; the Java agent works under Fabric; detect mode keys on SHZ reachability; scanner fixes; the warning dialog's Continue button closes it.\n\n2.2.0 — 加固关闭 hinting 的标志（建议更新）；Forge 与 NeoForge 现在真正生效；Java agent 在 Fabric 下可用；detect 模式改为按 SHZ 是否可达判断；修复扫描器问题；警告窗口的“继续”按钮可以正常关闭。",
   "loaders": [
     "forge",
     "neoforge"
   ],
-  "note": "Forge/NeoForge 路徑尚未在真實 Forge 實例中載入過；若 loader 拒載，請改用 GitHub release 的 javaagent。"
+  "note": "Forge/NeoForge 路徑尚未在真實 Forge 實例中載入過；若 loader 拒載，請改用 GitHub release 的 javaagent。",
+  "version_type": "release"
 }
