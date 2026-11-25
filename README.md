@@ -1,206 +1,73 @@
 # minecraft2shell-fix
 
-[![release](https://img.shields.io/github/v/release/sunrisemc-tw/minecraft2shell-fix?label=release)](https://github.com/sunrisemc-tw/minecraft2shell-fix/releases)
+[![release](https://img.shields.io/github/v/release/Ctrl-Creeper/minecraft2shell-fix?label=release)](https://github.com/Ctrl-Creeper/minecraft2shell-fix/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![minecraft](https://img.shields.io/badge/minecraft-1.20.5%20%E2%80%93%2026.4-3ddc84)](https://github.com/sunrisemc-tw/minecraft2shell-fix#%E6%94%AF%E6%8F%B4%E5%93%AA%E4%BA%9B%E7%89%88%E6%9C%AC)
-[![tests](https://img.shields.io/badge/tests-98%20passing-3ddc84)](https://github.com/sunrisemc-tw/minecraft2shell-fix/actions)
+[![minecraft](https://img.shields.io/badge/minecraft-1.20.5%20%E2%80%93%201.21.11-3ddc84)](#am-i-affected)
+[![tests](https://img.shields.io/badge/tests-98%20passing-3ddc84)](https://github.com/Ctrl-Creeper/minecraft2shell-fix/actions)
 
-幫你的 Minecraft 擋掉「伺服器資源包字型」攻擊 —— 代價是小字稍微變柔（見下方對照圖）。
+A client-side stopgap against the Minecraft **"server resource pack font" remote code execution**
+([`bikini/minecraft2shell`](https://github.com/bikini/minecraft2shell)). It stops FreeType from running
+the bytecode inside fonts, which is what the attack needs. The cost is slightly softer small text.
 
-> ⚠️ 已在 macOS 上的真實遊戲客戶端（Fabric、Forge、NeoForge、原版＋`-javaagent`）確認掛鉤有生效，
-> 但**沒有在 Windows 上實際跑過攻擊程式**。請當成「先擋一下」的過渡方案，不是官方修補。
+This is a fork of [`sunrisemc-tw/minecraft2shell-fix`](https://github.com/sunrisemc-tw/minecraft2shell-fix).
+Version 2.2.0 hardens the guard and makes the Forge and NeoForge builds actually work. The changes are
+offered upstream in [sunrisemc-tw/minecraft2shell-fix#2](https://github.com/sunrisemc-tw/minecraft2shell-fix/pull/2).
 
-### 免責聲明
+## Current status (2026-11-25)
 
-此工具僅為臨時解方，不是 Mojang 官方修復。
+- **Minecraft 26.x is fixed by Mojang.** The library versions for 26.1 through 26.4-pre-1 now point
+  to Mojang builds of FreeType **2.15.0**, which corrects the `Ins_SHZ` bug. The official launcher and
+  Prism Launcher both download them. You don't need this tool on 26.x unless a launcher or modpack pins
+  an older LWJGL.
+- **Minecraft 1.20.5 – 1.21.11 are still vulnerable.** They ship LWJGL 3.3.3 with FreeType 2.13.2 and
+  have not been updated. If you play these versions on servers you don't fully trust, install this
+  tool or decline server resource packs.
+- **Update from 2.1.0 or older.** 2.2.0 includes a security hardening of the guard itself.
 
-此工具可能存在誤判和漏判的可能，且不保證可以攔截所有攻擊及異常警告是正確的。
+## Disclaimer
 
-此工具不負任何誤判和漏判的直接／間接經濟損失和相應責任，所有責任由使用者自行承擔。若您不同意，請**不要安裝，直接拒絕所有伺服器的資源包發送請求！**
+This is a temporary workaround, not an official Mojang fix. It may have false positives and false
+negatives, and it cannot guarantee that it blocks every attack or that any warning it shows is
+correct. The authors accept no liability for any direct or indirect loss; all responsibility rests
+with the user. If you do not agree, **do not install it — decline every server resource-pack request
+instead.**
 
----
+## The problem
 
-## 中文
+A Minecraft server can make players download a resource pack, and a resource pack can contain
+TrueType fonts. Minecraft 1.20.5 and later render those fonts with FreeType. In FreeType before 2.15.0,
+the `SHZ` instruction in a font's hinting bytecode can write past the end of a heap buffer. The
+published exploit uses that to take over the client process when the game draws a single character
+with the font. Its demo opens the calculator on Windows, but the same technique can run anything.
 
-### 這是什麼問題（白話）
+The exploit is traced step by step in [docs/EXPLOIT-ANALYSIS.md](docs/EXPLOIT-ANALYSIS.md).
 
-Minecraft 允許伺服器發「資源包」給玩家，裡面可以放字型檔。有人做出了攻擊：**在字型裡藏一段惡意程式，
-玩家一畫到那個字，電腦就被執行任意程式**（公開示範只是開個小算盤，但同樣可以裝後門）。
+## Am I affected?
 
-問題出在遊戲畫字用的那套繪字引擎，**Minecraft 官方目前還沒修**。
+Checked against Mojang's version manifest and by loading the native libraries:
 
-### 這個工具做什麼
-
-**字型全部走「安全通道」：**所有字型載入時都關掉繪字引擎的 hinting（進階對齊）步驟。
-攻擊之所以成立，是因為那一步會執行字型裡自帶的程式碼；關掉它，字型裡的程式就沒有機會跑。
-這個做法**不需要先認出攻擊長什麼樣**，所以連還沒公開的變種也擋得住。
-
-代價是畫質：少了 hinting，小字會稍微變糊。這是刻意的取捨 —— **用一點畫質換掉整類攻擊**。
-
-**實際差多少，看圖最準（上排＝原版，下排＝本工具）：**
-
-![hinting comparison](docs/images/hinting-comparison.png)
-
-- 圖是**真的用 Minecraft 26.3 內建的同一個繪字引擎（FreeType 2.14.3）**畫出來的，不是示意圖；放大成像素格方便比較
-- **HUD 那種 9px 小字差最多**（邊緣變柔、不再對齊像素格）；16px 還看得出來；32px 幾乎分不出來
-- 量化：DejaVu Sans 32px 前 300 字元，**72% 點陣圖有變化、平均高度差 0.88 px、最差 2 px**
-- 中文（CJK）字因為筆畫多，差異比英文更不明顯
-
-如果你覺得小字糊到受不了，可以改用 `-Dm2sfix.policy=detect`：只有**可能執行到出問題那條指令（SHZ）**
-的字型才關 hinting，其他字型保持原樣。這個判斷不依賴攻擊長什麼樣，但會順帶影響一部分正常字型
-（在作者的 Mac 上約 11% 的字型會被降級）。
-
-**只有偵測到高危才會跳警告視窗**（一般字型只是安靜降級，不會打擾你）：
-
-```
-檢測到伺服器的資源包疑似包含惡意內容（minecraft2shell），已經攔截。
-這類字型可以在你的電腦上執行任意程式，這個伺服器送來的樣本沒有被執行。
-
-[我了解，繼續遊玩]  [中斷連線]
-```
-
-按「中斷連線」會直接離開那個伺服器。不需要任何設定，也不影響遊戲效能。
-
-想回到「只處理被判定為惡意字型」的舊行為（畫質優先）：
-在 JVM 參數加 `-Dm2sfix.policy=detect`。
-
-> 視窗裡**不會**顯示「它原本要執行什麼指令」。原因很實在：公開的那支攻擊程式把指令直接寫在
-> 字型的程式碼裡組出來，144 個字型裡用任何編碼（ASCII／UTF-16／拆成 4 byte）都找不到
-> `calc.exe`，沒有可靠辦法反推。與其顯示一個猜的，不如不顯示。
-
-### 支援哪些版本
-
-我直接對 Mojang 的版本清單（Piston meta）與實際的原生函式庫驗證過：
-
-| Minecraft | 內建 FreeType | 有這個漏洞嗎 | 本工具 |
+| Minecraft | FreeType it loads | Vulnerable | This tool |
 | --- | --- | --- | --- |
-| 26.3 / 26.4 快照 | 2.14.3（LWJGL 3.4.3） | 有 | ✅ |
-| 26.1 – 26.2 | 2.14.1（LWJGL 3.4.1） | 有 | ✅ |
-| 1.20.5 – 1.21.10 | 2.13.2（LWJGL 3.3.3） | 有 | ✅ |
-| 1.20.4 及更早 | 沒有用 FreeType（走 stb_truetype） | 不是同一個洞 | ⛔ 不適用 |
+| 26.1 – 26.4 pre-releases | 2.15.0 (Mojang build) | no | not needed (harmless) |
+| 1.20.5 – 1.21.11 | 2.13.2 (LWJGL 3.3.3) | **yes** | ✅ recommended |
+| 1.20.4 and older | none (uses stb_truetype) | not this bug | ⛔ not applicable |
 
-- FreeType 的 `Ins_SHZ` 修補是 2026 年 4 月進上游、隨 **2.15.0**（2026-10）釋出；上面三個版本樹全都早於它。
-- 最新正式版 26.3 與最新快照 26.4-snapshot-10 **都還是 lwjgl-freetype 3.4.3**，所以官方還沒修。
-- 1.20.4 以前的客戶端根本沒呼叫 FreeType，本工具掛上去也不會被觸發（不會壞，但也沒作用）。
-- 舊版（1.20.5–1.21.x）跑的是 Java 21，本工具就是編 Java 21，可以直接用。
+## What it does
 
-### 安裝（選一種就好）
+**Default (`safe`): no font gets hinting.** Every glyph is loaded with `FT_LOAD_NO_HINTING |
+FT_LOAD_NO_AUTOHINT`, so FreeType never runs a font's bytecode: no `fpgm`, no `prep`, no glyph
+programs. The tool doesn't have to recognise the attack, so variants that haven't been published are
+covered too.
 
-**原版啟動器（官方啟動器）**
-
-1. 到 [Releases](https://github.com/sunrisemc-tw/minecraft2shell-fix/releases) 下載 `m2sfix-agent-2.2.0.jar`，記住它放在哪
-2. 啟動器 →「安裝檔」→ 你的版本 →「編輯」→「更多選項」
-3. 在「JVM 參數」那欄最後面加上（路徑換成你放的位置）：
-   ```
-   -javaagent:/你的路徑/m2sfix-agent-2.2.0.jar
-   ```
-4. 儲存，啟動遊戲
-
-**Fabric**
-
-下載 `m2sfix-mod-2.2.0.jar`，丟進 `.minecraft/mods/` 就好（不需要 Fabric API）。
-
-**Forge / NeoForge**
-
-同一顆 `m2sfix-mod-2.2.0.jar` 丟進 `mods/`。已實測 Forge 1.20.6、1.21.10 與 NeoForge 1.20.5、1.20.6、
-1.21.10、26.3。如果掛鉤沒套上，遊戲會**直接停止啟動並告訴你改用 `-javaagent`**，不會默默失效。
-
-> 注意：在 Forge / NeoForge 上，模組只保護 Minecraft 自己畫字的地方。如果你有裝**其他自己呼叫
-> FreeType 的模組**，改用 `-javaagent`，它會攔住所有呼叫。
-
-### 怎麼知道有沒有生效
-
-啟動後日誌裡會出現這兩行，代表掛鉤真的有在工作：
-
-```
-[m2sfix] guard active: FT_New_Memory_Face intercepted (policy=safe)
-[m2sfix] guard active: FT_Load_Glyph intercepted (policy=safe)
-```
-
-遇到惡意字型時會多一行（並跳警告視窗）：
-
-```
-[m2sfix] flagged font 11500c6f… (SUSPICIOUS): IDEF redefines point-zone opcode 0x36 in fpgm
-```
-
-警告視窗在 Forge、NeoForge 26.x 與 Fabric＋`-javaagent` 上實測會出現；在原版 1.21.x 和一般
-Fabric 1.21.x 上會改成寫進日誌（遊戲內部名稱被混淆，找不到視窗類別）。不論哪種，字型都已經被處理。
-
-### 需要注意的地方
-
-- 預設模式（safe）不需要認得攻擊；警告視窗則只認得「已知的那一類手法」，新變種可能被安靜擋下但不跳警告
-- 真正的解法是等 Minecraft 更新繪字引擎（FreeType 2.15.0 以上），這個工具只是過渡
-- 實機測試都在 macOS（Apple Silicon）上；Windows / Linux 沒有實機跑過
-- 警告視窗的按鈕只在單元測試驗證過，沒有在遊戲裡實際點過
-
-### 授權
-
-MIT。自由使用、修改、再散布。
-
-### 想更深入了解
-
-- 掛點位置、偵測原理、設定選項、測試數據 → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
-- 攻擊是怎麼運作的（逐步拆解公開 PoC）→ **[docs/EXPLOIT-ANALYSIS.md](docs/EXPLOIT-ANALYSIS.md)**
-- 版本紀錄 → **[CHANGELOG.md](CHANGELOG.md)**
-- 研究這個專案碰到什麼問題 → **[SECURITY.md](SECURITY.md)**
-
----
-
-## English
-
-A client-side mitigation for the Minecraft "server resource pack font" attack. The price is slightly
-softer small text (see the comparison below).
-
-> ⚠️ The hooks were confirmed working in real game clients on macOS (Fabric, Forge, NeoForge, and
-> vanilla with `-javaagent`), but **the exploit itself was never run against it on Windows**. Treat it
-> as a stopgap, not a vendor fix.
-
-### Disclaimer
-
-This tool is a temporary workaround, not an official Mojang fix.
-
-It may produce false positives and false negatives, and it cannot guarantee that it blocks every
-attack or that any warning it shows is correct.
-
-The author accepts no liability for any direct or indirect financial loss or other consequences of
-false positives or false negatives; all responsibility rests with the user. If you do not agree,
-**do not install it — just decline every server resource-pack request instead!**
-
-### The problem, in plain words
-
-A Minecraft server can send players a resource pack that contains a font. Someone figured out how to
-hide a malicious program inside such a font: **the moment the game draws a character with it, the
-player's computer can be made to run arbitrary code.** The flaw is in the font engine the game uses,
-and **Minecraft has not shipped a fix yet.**
-
-### What this does
-
-**Every font goes through a safe channel:** glyph loading always skips the "hinting" step of the font
-engine. The attack only works because that step executes bytecode embedded in the font; skip it and
-the font's own program never runs. This needs no idea of what the attack looks like, so variants that
-are not public yet are covered too.
-
-The cost is rendering quality: without hinting, small text looks slightly softer. That is the
-deliberate trade — **a little sharpness for a whole class of bugs**.
-
-**See exactly how much (top row = vanilla, bottom row = this tool):**
+The cost is sharpness. Top row = vanilla, bottom row = this tool, rendered with the real FreeType build
+Minecraft ships:
 
 ![hinting comparison](docs/images/hinting-comparison.png)
 
-- Rendered with the **same font engine Minecraft 26.3 ships (FreeType 2.14.3)**, then zoomed with
-  nearest-neighbour so individual pixels are visible — not a mock-up
-- **HUD-sized 9 px text changes the most** (softer edges, no longer pixel-aligned); 16 px is still
-  noticeable; at 32 px you can barely tell
-- Measured on DejaVu Sans at 32 px, first 300 glyphs: **72% of bitmaps change, mean height
-  difference 0.88 px, worst case 2 px**
-- CJK text shows the difference even less, because dense strokes hide it
+- HUD-sized 9 px text changes the most, 32 px barely at all, and CJK text even less.
+- On DejaVu Sans at 32 px, 72% of glyph bitmaps change, with a mean height difference of 0.88 px.
 
-If the softness bothers you, switch to `-Dm2sfix.policy=detect`: only fonts whose bytecode **could
-execute the faulty instruction (`SHZ`)** lose hinting; everything else stays vanilla. This does not
-depend on recognising the attack, but it also catches some ordinary fonts (about 11% of the faces
-installed on the author's Mac).
-
-**A warning dialog appears only for high-confidence hits** (ordinary fonts are just quietly degraded):
+**A warning appears only for high-confidence hits**, i.e. fonts shaped like the published exploit:
 
 ```
 This server's resource pack looks malicious (minecraft2shell). It was blocked and did not run;
@@ -209,91 +76,98 @@ fonts like this can execute arbitrary code on the client.
 [Continue]  [Disconnect]
 ```
 
-"Disconnect" leaves that server immediately. No configuration, no measurable performance cost.
+"Disconnect" leaves the server. The dialog doesn't try to show the command the font would have run:
+the exploit builds it inside its bytecode, so it can't be recovered reliably.
 
-> The dialog deliberately does **not** show "the command it would have run". The published exploit
-> builds its command inside the font's own bytecode: `calc.exe` appears in none of the 144 shipped
-> fonts in any encoding (ASCII, UTF-16, 4-byte split), so there is no reliable way to recover it.
-> Showing a guess would be worse than showing nothing.
+## Install
 
-### Supported versions
+Download from [Releases](https://github.com/Ctrl-Creeper/minecraft2shell-fix/releases). Pick one:
 
-Checked against Mojang's own version manifest (Piston meta) and the actual native libraries:
+**Any launcher, including vanilla: Java agent.** This covers every FreeType call in the game,
+including calls from other mods.
 
-| Minecraft | bundled FreeType | vulnerable | this tool |
-| --- | --- | --- | --- |
-| 26.3 / 26.4 snapshots | 2.14.3 (LWJGL 3.4.3) | yes | ✅ |
-| 26.1 – 26.2 | 2.14.1 (LWJGL 3.4.1) | yes | ✅ |
-| 1.20.5 – 1.21.10 | 2.13.2 (LWJGL 3.3.3) | yes | ✅ |
-| 1.20.4 and older | no FreeType (stb_truetype) | a different bug | ⛔ not applicable |
+1. Download `m2sfix-agent-2.2.0.jar` and put it somewhere permanent.
+2. In the launcher, open your installation's JVM arguments (vanilla launcher: Installations → Edit →
+   More options).
+3. Append `-javaagent:/full/path/to/m2sfix-agent-2.2.0.jar` and launch.
 
-- The `Ins_SHZ` fix landed upstream in April 2026 and shipped in **2.15.0** (2026-10); every version
-  tree above predates it.
-- The latest release (26.3) and the latest snapshot (26.4-snapshot-10) still ship
-  `lwjgl-freetype 3.4.3` — Mojang has not shipped the fix yet.
-- Before 1.20.5 the client never calls FreeType, so the hooks are never reached (harmless, but no
-  effect either).
-- 1.20.5 – 1.21.x run Java 21, which is what this project targets, so they work as-is.
+**Fabric:** put `m2sfix-mod-2.2.0.jar` in `mods/`. No Fabric API needed.
 
-### Install (pick one)
+**Forge / NeoForge:** put the same `m2sfix-mod-2.2.0.jar` in `mods/`. On these loaders the mod covers
+Minecraft's own font rendering. If you also run mods that call FreeType themselves, use the Java agent.
 
-**Vanilla launcher**
+If the mod's hooks can't apply on your loader version, the game **stops at startup** with a message
+telling you to use the Java agent. It never runs unprotected without telling you.
 
-1. Download `m2sfix-agent-2.2.0.jar` from [Releases](https://github.com/sunrisemc-tw/minecraft2shell-fix/releases)
-2. Launcher → Installations → your instance → Edit → More options
-3. Append to "JVM arguments" (use your own path):
-   ```
-   -javaagent:/full/path/to/m2sfix-agent-2.2.0.jar
-   ```
-4. Save and launch
+Tested in real clients (macOS, Apple Silicon):
 
-**Fabric**
+| Route | Versions |
+| --- | --- |
+| Mod on Fabric | 1.21.10 |
+| Mod on Forge | 1.20.6, 1.21.10 |
+| Mod on NeoForge | 1.20.5, 1.20.6, 1.21.10, 26.3 |
+| Agent | vanilla 1.21.10, Fabric 1.21.10 |
 
-Drop `m2sfix-mod-2.2.0.jar` into `.minecraft/mods/` (no Fabric API needed).
+## Did it work?
 
-**Forge / NeoForge**
-
-The same `m2sfix-mod-2.2.0.jar` goes into `mods/`. Tested on Forge 1.20.6 and 1.21.10 and NeoForge
-1.20.5, 1.20.6, 1.21.10 and 26.3. If the hooks cannot apply, the game **stops at startup and tells
-you to use `-javaagent`** instead of silently running unprotected.
-
-> On Forge / NeoForge the mod protects Minecraft's own font rendering. If you also run **other mods
-> that call FreeType themselves**, use the `-javaagent` route, which intercepts every call.
-
-### Did it work?
-
-After startup the log shows that the hooks are live:
+Right after startup the log shows the hooks firing:
 
 ```
 [m2sfix] guard active: FT_New_Memory_Face intercepted (policy=safe)
 [m2sfix] guard active: FT_Load_Glyph intercepted (policy=safe)
 ```
 
-A known-malicious font adds a line (and the warning dialog):
+If those lines are missing, the guard is not active. A font shaped like the published exploit adds:
 
 ```
 [m2sfix] flagged font 11500c6f… (SUSPICIOUS): IDEF redefines point-zone opcode 0x36 in fpgm
 ```
 
-The dialog was seen opening on Forge, NeoForge 26.x and Fabric with `-javaagent`. On obfuscated
-vanilla 1.21.x and plain Fabric 1.21.x the warning goes to the log instead; the font is handled
-either way.
+The warning dialog opened on Forge, NeoForge 26.x, and Fabric with the agent. On obfuscated vanilla
+1.21.x and plain Fabric 1.21.x the warning goes to the log instead. Either way the font is handled.
 
-### Caveats
+## Options
 
-- The default `safe` mode needs no signature; the warning dialog does, so a new variant may be
-  neutralised silently without a warning
-- The real fix is a Minecraft update that ships FreeType ≥ 2.15.0 — this is a stopgap
-- Real-client testing was done on macOS (Apple Silicon); Windows and Linux were not run live
-- The dialog buttons are verified by unit tests only, not clicked in a running game
+Add these as JVM arguments (`-D…`). The defaults are what most people want.
 
-### License
+| Property | Default | Meaning |
+| --- | --- | --- |
+| `m2sfix.policy` | `safe` | `safe`: no font gets hinting · `detect`: only fonts whose bytecode could execute `SHZ` lose hinting (sharper, but about 11% of ordinary fonts are affected too) · `block`: refuse exploit-shaped fonts, otherwise like `detect` · `off` |
+| `m2sfix.notify` | `true` | show the warning dialog |
+| `m2sfix.log` | `true` | log one line per flagged font |
+| `m2sfix.sha256.allow` | *(empty)* | comma-separated SHA-256 of fonts to always trust |
 
-MIT.
+Full list and details: [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
-### Going deeper
+## Limitations
 
-- Hook points, detection logic, configuration, test data → **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**
-- How the attack works, step by step → **[docs/EXPLOIT-ANALYSIS.md](docs/EXPLOIT-ANALYSIS.md)**
-- Version history → **[CHANGELOG.md](CHANGELOG.md)**
-- Reporting a bypass → **[SECURITY.md](SECURITY.md)**
+- It's a stopgap. The real fix is FreeType ≥ 2.15.0, which Mojang has shipped for 26.x only.
+- Live testing was done on macOS (Apple Silicon) only. Windows and Linux use the same Java hooks but
+  were not run live.
+- The exploit itself was never run against a protected client. Protection rests on FreeType's code
+  (every bytecode path is behind the hinting check) plus tests on the real native libraries.
+- The warning dialog is signature-based, so a new variant may be neutralised without a warning. The
+  dialog buttons were checked by unit tests, not clicked in a running game.
+
+## Build
+
+```
+mvn -B clean package           # 98 tests (+1 Linux-only skip)
+tools/verify-poc-pack.sh       # scans the published proof-of-concept pack: expects 144/144 flagged
+```
+
+Jars: `agent/target/m2sfix-agent-*.jar` and `mod/target/m2sfix-mod-*.jar`. Requires Java 21.
+
+## More
+
+- How the hooks and scanner work, with test data → [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)
+- Per-loader test results → [docs/LOADERS.md](docs/LOADERS.md)
+- `detect` mode rule and its cost → [docs/DETECT-MODE.md](docs/DETECT-MODE.md)
+- The exploit, step by step → [docs/EXPLOIT-ANALYSIS.md](docs/EXPLOIT-ANALYSIS.md)
+- Version history → [CHANGELOG.md](CHANGELOG.md)
+- Reporting a bypass → [SECURITY.md](SECURITY.md)
+
+## License
+
+MIT. Original project by duckducktw / [sunrisemc-tw](https://github.com/sunrisemc-tw); 2.2.0 changes in
+this fork.
