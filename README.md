@@ -4,11 +4,12 @@ A client-side stopgap against the Minecraft "server resource pack font" remote c
 
 Unlike the original [sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix), this mod does not disable font hinting, preserving font rendering quality.
 
-This mod backports Mojang's fix for Minecraft 26.x by replacing FreeType with the patched version (2.15.0) instead of disabling hinting altogether.
+This mod backports Mojang's fix for Minecraft 26.3 by replacing FreeType with the patched version (2.15.0) instead of disabling hinting altogether.
 
 The binaries shipped with this mod are extracted from official Mojang builds, as listed in the [Minecraft 26.3 version manifest](https://piston-meta.mojang.com/v1/packages/8696584e8d2da5726487597e6c5777480387ec22/26.3.json).
+Please be noticed that linux on ARM64 is not supported yet because Mojang does not provide fixed binary on linux ARM64.
 
-Supports Minecraft 1.20.5 to 26.3, NeoForge + Forge + Fabric. Mojang has fixed this in 26.x versions, so if you use 26.x versions and your launcher havn't pinned LWJGL version, you don't need this mod.
+Supports Minecraft 1.20.5 to 26.3, NeoForge + Forge + Fabric. Mojang has fixed this in 26.3 version, so if you use 26.3 version and your launcher havn't pinned LWJGL version, you don't need this mod.
 
 Also, this mod is not vibe slop :) It is entirely human-written.
 
@@ -28,3 +29,11 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+## FreeType License
+
+This mod is based in part on the work of the FreeType Team.
+
+The bundled FreeType 2.15.0 binaries are redistributed under the FreeType License (FTL).
+
+These binaries are extracted from official Mojang builds and redistributed without modification.
