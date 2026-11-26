@@ -1,6 +1,6 @@
 {
-  "version_number": "2.2.0",
-  "name": "2.2.0 (Fabric)",
+  "version_number": "2.2.1",
+  "name": "2.2.1 (Fabric)",
   "game_versions": [
     "1.20.5",
     "1.20.6",
@@ -19,8 +19,8 @@
   ],
   "featured": true,
   "dependencies": [],
-  "file": "../mod/target/mc2shell-fix-mod-2.2.0.jar",
-  "changelog": "2.2.0 — Security hardening of the no-hinting flags (recommended update); Forge and NeoForge now actually load and apply; the Java agent works under Fabric; detect mode keys on SHZ reachability; scanner fixes; the warning dialog's Continue button closes it.\n\n2.2.0 — 加固关闭 hinting 的标志（建议更新）；Forge 与 NeoForge 现在真正生效；Java agent 在 Fabric 下可用；detect 模式改为按 SHZ 是否可达判断；修复扫描器问题；警告窗口的“继续”按钮可以正常关闭。",
+  "file": "../mod/target/mc2shell-fix-mod-2.2.1.jar",
+  "changelog": "Adds pack metadata to fix the Forge startup warning. Verified the Java agent on Forge and NeoForge for Minecraft 1.20.6 and 1.21.10, including combined mod and agent runs on 1.21.10.\n\n新增资源包元数据，修复 Forge 启动警告。已在 Minecraft 1.20.6 和 1.21.10 的 Forge 与 NeoForge 上验证 Java agent，并在两种加载器的 1.21.10 上验证模组与 agent 同时使用。",
   "loaders": [
     "fabric"
   ],

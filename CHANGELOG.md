@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.1 — 2026-11-26
+
+- Added pack metadata to the mod jar to clear the Forge startup warning.
+- Verified the Java agent on Forge and NeoForge for Minecraft 1.20.6 and 1.21.10. Also verified
+  combined mod and agent runs on Forge, NeoForge, and Fabric for Minecraft 1.21.10.
+
 ## 2.2.0 — 2026-11-25
 
 **Security hardening (recommended update).** The guard now ORs `FT_LOAD_NO_HINTING |

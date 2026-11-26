@@ -1,0 +1,9 @@
+{
+  "pack": {
+    "description": "mc2shell-fix",
+    "pack_format": 32,
+    "supported_formats": [32, 75],
+    "min_format": 32,
+    "max_format": 75
+  }
+}
