@@ -9,9 +9,10 @@ A client-side stopgap against the Minecraft **"server resource pack font" remote
 ([`bikini/minecraft2shell`](https://github.com/bikini/minecraft2shell)). It stops FreeType from running
 the bytecode inside fonts, which is what the attack needs. The cost is slightly softer small text.
 
-This is a fork of [`sunrisemc-tw/minecraft2shell-fix`](https://github.com/sunrisemc-tw/minecraft2shell-fix).
-Version 2.2.0 hardens the guard and makes the Forge and NeoForge builds actually work. The changes are
-offered upstream in [sunrisemc-tw/minecraft2shell-fix#2](https://github.com/sunrisemc-tw/minecraft2shell-fix/pull/2).
+mc2shell-fix is an independent project based on
+[`sunrisemc-tw/minecraft2shell-fix`](https://github.com/sunrisemc-tw/minecraft2shell-fix). Since 2.2.0 it
+has its own releases: a hardened guard and Forge/NeoForge builds that actually work. The 2.2.0 changes are
+also offered upstream in [sunrisemc-tw/minecraft2shell-fix#2](https://github.com/sunrisemc-tw/minecraft2shell-fix/pull/2).
 
 ## Current status (2026-11-25)
 
@@ -175,5 +176,5 @@ Jars: `agent/target/mc2shell-fix-agent-*.jar` and `mod/target/mc2shell-fix-mod-*
 
 ## License
 
-MIT. Original project by duckducktw / [sunrisemc-tw](https://github.com/sunrisemc-tw); 2.2.0 changes in
-this fork.
+MIT. Based on the original project by duckducktw / [sunrisemc-tw](https://github.com/sunrisemc-tw);
+maintained independently since 2.2.0.

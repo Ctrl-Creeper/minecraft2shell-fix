@@ -42,8 +42,8 @@ and 1.21.10.
 A temporary workaround, not an official Mojang fix. It may have false positives or negatives and
 comes with no guarantee. If you don't agree, decline server resource packs instead.
 
-Open source (MIT): [GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix). It's a fork of
-[sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix).
+Open source (MIT): [GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix). Based on
+[sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix), maintained independently.
 
 ---
 
@@ -84,5 +84,5 @@ Open source (MIT): [GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix)
 
 这只是临时解决方案，不是 Mojang 官方修复；可能存在误报或漏报，不提供任何保证。若不同意，请改为拒绝服务器的资源包。
 
-开源（MIT）：[GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix)，派生自
-[sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix)。
+开源（MIT）：[GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix)。基于
+[sunrisemc-tw/minecraft2shell-fix](https://github.com/sunrisemc-tw/minecraft2shell-fix)，现已独立维护。
