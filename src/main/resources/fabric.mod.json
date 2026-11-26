@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraft2shellfixng",
+  "version": "1.0.0",
+  "name": "Minecraft2Shell Fix NG",
+  "description": "Cuts the Minecraft font resource-pack RCE chain by backporting Mojang fix on 26.x, preserving font rendering quality.",
+  "license": "GPL-3.0-or-later",
+  "environment": "client",
+  "mixins": [
+    "minecraft2shellfixng.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": ">=1.20.5 <=26.3",
+    "java": ">=21"
+  }
+}

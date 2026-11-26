@@ -1,0 +1,27 @@
+modLoader="lowcodefml"
+loaderVersion="[0,)"
+license="GPL-3.0-or-later"
+
+[[mods]]
+modId="minecraft2shellfixng"
+version="1.0.0"
+displayName="Minecraft2Shell Fix NG"
+authors="Ctrl Creeper, Xu Colin"
+description='''Cuts the Minecraft font resource-pack RCE chain by backporting Mojang fix on 26.x, preserving font rendering quality.'''
+
+[[mixins]]
+config="minecraft2shellfixng.mixins.json"
+
+[[dependencies.minecraft2shellfixng]]
+modId="neoforge"
+type="required"
+versionRange="[0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.minecraft2shellfixng]]
+modId="minecraft"
+type="required"
+versionRange="[1.20.5,26.3]"
+ordering="NONE"
+side="BOTH"
