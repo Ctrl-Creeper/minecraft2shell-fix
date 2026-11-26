@@ -24,5 +24,5 @@ jobs:
         with:
           name: jars
           path: |
-            agent/target/m2sfix-agent-*.jar
-            mod/target/m2sfix-mod-*.jar
+            agent/target/mc2shell-fix-agent-*.jar
+            mod/target/mc2shell-fix-mod-*.jar

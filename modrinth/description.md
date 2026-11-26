@@ -30,7 +30,7 @@ warning with a **Disconnect** button.
   apply, the game stops at startup and tells you, so it never runs unprotected without saying so.
 - **Vanilla launcher, or if you run other mods that call FreeType themselves:** use the Java agent
   from [GitHub Releases](https://github.com/Ctrl-Creeper/minecraft2shell-fix/releases) with
-  `-javaagent:/path/to/m2sfix-agent-2.2.0.jar`.
+  `-javaagent:/path/to/mc2shell-fix-agent-2.2.0.jar`.
 
 It works if the log shows `[m2sfix] guard active: FT_Load_Glyph intercepted` after startup.
 
@@ -74,7 +74,7 @@ Open source (MIT): [GitHub](https://github.com/Ctrl-Creeper/minecraft2shell-fix)
   停止并告诉你，绝不会在没有保护的情况下默默运行。
 - **原版启动器，或装了其他会直接调用 FreeType 的模组：** 请从
   [GitHub Releases](https://github.com/Ctrl-Creeper/minecraft2shell-fix/releases) 下载 Java agent，
-  在 JVM 参数中加入 `-javaagent:/路径/m2sfix-agent-2.2.0.jar`。
+  在 JVM 参数中加入 `-javaagent:/路径/mc2shell-fix-agent-2.2.0.jar`。
 
 启动后日志中出现 `[m2sfix] guard active: FT_Load_Glyph intercepted`，就表示已经生效。
 

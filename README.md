@@ -86,14 +86,14 @@ Download from [Releases](https://github.com/Ctrl-Creeper/minecraft2shell-fix/rel
 **Any launcher, including vanilla: Java agent.** This covers every FreeType call in the game,
 including calls from other mods.
 
-1. Download `m2sfix-agent-2.2.0.jar` and put it somewhere permanent.
+1. Download `mc2shell-fix-agent-2.2.0.jar` and put it somewhere permanent.
 2. In the launcher, open your installation's JVM arguments (vanilla launcher: Installations → Edit →
    More options).
-3. Append `-javaagent:/full/path/to/m2sfix-agent-2.2.0.jar` and launch.
+3. Append `-javaagent:/full/path/to/mc2shell-fix-agent-2.2.0.jar` and launch.
 
-**Fabric:** put `m2sfix-mod-2.2.0.jar` in `mods/`. No Fabric API needed.
+**Fabric:** put `mc2shell-fix-mod-2.2.0.jar` in `mods/`. No Fabric API needed.
 
-**Forge / NeoForge:** put the same `m2sfix-mod-2.2.0.jar` in `mods/`. On these loaders the mod covers
+**Forge / NeoForge:** put the same `mc2shell-fix-mod-2.2.0.jar` in `mods/`. On these loaders the mod covers
 Minecraft's own font rendering. If you also run mods that call FreeType themselves, use the Java agent.
 
 If the mod's hooks can't apply on your loader version, the game **stops at startup** with a message
@@ -156,7 +156,7 @@ mvn -B clean package           # 98 tests (+1 Linux-only skip)
 tools/verify-poc-pack.sh       # scans the published proof-of-concept pack: expects 144/144 flagged
 ```
 
-Jars: `agent/target/m2sfix-agent-*.jar` and `mod/target/m2sfix-mod-*.jar`. Requires Java 21.
+Jars: `agent/target/mc2shell-fix-agent-*.jar` and `mod/target/mc2shell-fix-mod-*.jar`. Requires Java 21.
 
 ## More
 
