@@ -76,8 +76,12 @@ call() {  # call METHOD PATH [curl args...] -> prints body; dies on HTTP >= 400
 }
 
 echo "3. account"
-user="$(call GET /user)"
-echo "  ok  logged in as $(printf '%s' "$user" | python3 -c 'import json,sys;print(json.load(sys.stdin)["username"])')"
+# Informational only: the lookup needs the "Read user data" scope, publishing does not.
+if user="$(call GET /user 2>/dev/null)"; then
+  echo "  ok  logged in as $(printf '%s' "$user" | python3 -c 'import json,sys;print(json.load(sys.stdin)["username"])')"
+else
+  echo "  --  account lookup refused (token lacks \"Read user data\"?), continuing"
+fi
 
 slug="$(json "$dir/project.json" slug)"
 status_code="$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: $token" -H "User-Agent: $ua" "$api/project/$slug")"
@@ -109,7 +113,7 @@ print(json.dumps({
 }, ensure_ascii=False))
 PY
 )"
-  call POST /project -F "data=$data" >/dev/null
+  call POST /project --form-string "data=$data" >/dev/null
   echo "  ok  created draft $slug"
 fi
 project="$(call GET "/project/$slug")"
@@ -155,7 +159,7 @@ print(json.dumps(v, ensure_ascii=False))
 PY
 )"
   if [[ "$data" == "SKIP" ]]; then echo "  ok  $spec already uploaded, skipping"; continue; fi
-  call POST /version -F "data=$data" -F "file=@$jar_path;type=application/java-archive" >/dev/null
+  call POST /version --form-string "data=$data" -F "file=@$jar_path;type=application/java-archive" >/dev/null
   ok "uploaded $spec"
 done
 

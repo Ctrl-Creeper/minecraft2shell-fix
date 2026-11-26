@@ -1,6 +1,6 @@
 {
   "title": "mc2shell-fix",
-  "slug": "mc2shell-fix",
+  "slug": "mc2shell-fix-mod",
   "project_type": "mod",
   "summary": "Blocks the Minecraft resource-pack font RCE (minecraft2shell) on 1.20.5–1.21.11 by never running font bytecode. 在客户端拦截资源包字体攻击。",
   "description_file": "description.md",

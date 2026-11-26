@@ -24,5 +24,6 @@
   "loaders": [
     "fabric"
   ],
-  "version_type": "release"
+  "version_type": "release",
+  "environment": "client_only"
 }
