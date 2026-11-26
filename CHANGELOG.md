@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Mod ID changed from `m2sfix` to `mc2shell_fix` and the display name to "mc2shell-fix". No action
+  needed: the `[m2sfix]` log prefix and the `-Dm2sfix.*` options stay the same.
+
 ## 2.2.1 — 2026-11-25
 
 - Added pack metadata to the mod jar to clear the Forge startup warning.

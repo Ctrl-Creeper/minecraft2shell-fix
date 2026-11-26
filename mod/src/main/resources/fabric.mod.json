@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "m2sfix",
+  "id": "mc2shell_fix",
   "version": "${project.version}",
-  "name": "minecraft2shell-fix",
+  "name": "mc2shell-fix",
   "description": "Cuts the Minecraft font resource-pack RCE chain by keeping the TrueType bytecode interpreter away from fonts that carry the exploit primitive.",
   "authors": [
     "duckducktw"
