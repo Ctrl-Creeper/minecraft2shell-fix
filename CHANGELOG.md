@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.2.1 — 2026-11-26
+## 2.2.1 — 2026-11-25
 
 - Added pack metadata to the mod jar to clear the Forge startup warning.
 - Verified the Java agent on Forge and NeoForge for Minecraft 1.20.6 and 1.21.10. Also verified
